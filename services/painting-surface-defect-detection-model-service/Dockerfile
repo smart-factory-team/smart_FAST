@@ -1,4 +1,3 @@
-# services/model-service-1/Dockerfile (다른 서비스도 동일)
 FROM python:3.9-slim
 
 WORKDIR /app
@@ -15,8 +14,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 애플리케이션 코드 복사
 COPY app/ ./app/
 
-# 포트 노출
-EXPOSE 8001
-
-# 애플리케이션 실행
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+EXPOSE 8002
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
