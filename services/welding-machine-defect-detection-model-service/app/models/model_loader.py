@@ -5,7 +5,12 @@ from keras.models import load_model
 
 
 def load_scaler(signal_type: str):
-    return joblib.load(f"app/models/scalers/welding_scaler_{signal_type}.pkl")
+    try:
+        return joblib.load(f"app/models/scalers/welding_scaler_{signal_type}.pkl")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Scaler file for signal type '{signal_type}' not found")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load scaler for signal type '{signal_type}': {str(e)}")
 
 
 def load_model_file(signal_type: str):
