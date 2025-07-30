@@ -1,39 +1,31 @@
 from app.models.model_loader import load_scaler, load_model_file, load_threshold
 import numpy as np
+import pytest
 
 
-def test_vibration_model_loading(signal_type="vib"):
+@pytest.mark.parametrize("signal_type,features", [
+    ("vib", 512),
+    ("cur", 1024)
+])
+def test_model_loading(signal_type, features):
     # 테스트 1: scaler 로딩
     scaler = load_scaler(signal_type)
-    sample_data = np.random.rand(1, 512)
+    assert scaler is not None, f"Scaler for {signal_type} should be loaded successfully"
+
+    sample_data = np.random.rand(1, features)
     scaled_data = scaler.transform(sample_data)
-    print("[✓] Scaler loaded and transform success:", scaled_data)
+    assert scaled_data.shape == sample_data.shape, "Scaled data should maintain input shape"
 
     # 테스트 2: 모델 로딩
     model = load_model_file(signal_type)
-    print("[✓] Model loaded successfully:", model)
+    assert model is not None, f"Model for {signal_type} should be loaded successfully"
+    assert hasattr(model, 'predict'), "Model should have predict method"
 
     # 테스트 3: threshold 로딩
     threshold = load_threshold(signal_type)
-    print("[✓] Threshold loaded:", threshold)
-
-
-def test_current_model_loading(signal_type="cur"):
-    # 테스트 1: scaler 로딩
-    scaler = load_scaler(signal_type)
-    sample_data = np.random.rand(1, 1024)
-    scaled_data = scaler.transform(sample_data)
-    print("[✓] Scaler loaded and transform success:", scaled_data)
-
-    # 테스트 2: 모델 로딩
-    model = load_model_file(signal_type)
-    print("[✓] Model loaded successfully:", model)
-
-    # 테스트 3: threshold 로딩
-    threshold = load_threshold(signal_type)
-    print("[✓] Threshold loaded:", threshold)
+    assert isinstance(threshold, (int, float)), "Threshold should be numeric"
+    assert threshold > 0, "Threshold should be positive"
 
 
 if __name__ == "__main__":
-    test_vibration_model_loading()
-    test_current_model_loading()
+    pytest.main([__file__])
