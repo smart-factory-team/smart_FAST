@@ -23,15 +23,5 @@ def load_model_file(signal_type: str):
 
 
 def load_threshold(signal_type: str):
-    try:
-        with open("static/thresholds/welding_thresholds.json", "r") as f:
-            thresholds = json.load(f)
-            if signal_type not in thresholds:
-                raise KeyError(f"Threshold for signal type '{signal_type}' not found in configuration")
-            return thresholds[signal_type]
-    except FileNotFoundError:
-        raise FileNotFoundError("Threshold configuration file not found")
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in threshold configuration file: {str(e)}")
-    except Exception as e:
-        raise RuntimeError(f"Failed to load threshold for signal type '{signal_type}': {str(e)}")
+    with open("static/thresholds/welding_thresholds.json", "r") as f:
+        return json.load(f)[signal_type]
