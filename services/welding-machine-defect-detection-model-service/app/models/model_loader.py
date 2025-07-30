@@ -14,12 +14,7 @@ def load_scaler(signal_type: str):
 
 
 def load_model_file(signal_type: str):
-    try:
-        return load_model(f"app/models/trained_models/welding_{signal_type}_model.keras")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Model file for signal type '{signal_type}' not found")
-    except Exception as e:
-        raise RuntimeError(f"Failed to load model for signal type '{signal_type}': {str(e)}")
+    return load_model(f"app/models/trained_models/welding_{signal_type}_model.keras")
 
 
 def load_threshold(signal_type: str):
