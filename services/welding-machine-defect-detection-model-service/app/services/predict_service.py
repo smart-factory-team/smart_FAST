@@ -11,11 +11,15 @@ def predict_anomaly(signal_type: str, values: list):
     model = load_model_file(signal_type)
     threshold = load_threshold(signal_type)
 
-    scaled = scaler.transform(arr)
-    reshaped = scaled.reshape(scaled.shape[0], scaled.shape[1], 1)
+    try:
+        scaled = scaler.transform(arr)
+        reshaped = scaled.reshape(scaled.shape[0], scaled.shape[1], 1)
 
-    pred = model.predict(reshaped)
-    mae = np.mean(np.abs(pred - reshaped))
+        pred = model.predict(reshaped)
+        mae = np.mean(np.abs(pred - reshaped))
+
+    except Exception as e:
+        raise RuntimeError(f"Prediction pipeline failed: {str(e)}")
 
     return {
         "signal_type": signal_type,
