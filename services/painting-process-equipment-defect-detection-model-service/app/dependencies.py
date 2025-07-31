@@ -2,15 +2,17 @@ import joblib
 import shap
 import yaml
 from fastapi import HTTPException
+from datetime import datetime
 
 # 전역 변수 초기화
 _model = None
 _config = None
 _explainer = None
+_initialization_complete = False # 초기화 완료 상태를 추적하는 플래그
 
 # 애플리케이션 시작 시 설정 파일, 모델 로드 및 explainer 재생성 함수
 async def load_resources():
-    global _model, _explainer, _config
+    global _model, _explainer, _config, _initialization_complete # 플래그를 global로 선언
 
     # 설정 파일 로드
     config_path = "app/models/model_config.yaml"
@@ -43,6 +45,10 @@ async def load_resources():
         # 모델 로드 성공 후 Explainer 재생성
         _explainer = shap.TreeExplainer(_model)
         print("SHAP explainer 재생성 완료")
+
+        _initialization_complete = True # 모든 리소스 로드 성공 시 플래그를 True로 설정
+        print("애플리케이션 초기화 완료")
+
     except FileNotFoundError:
         print(f"오류: 모델 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
         raise FileNotFoundError(f"Model file not found at specified path.") from None
@@ -65,3 +71,7 @@ def get_explainer():
     if _explainer is None:
         raise HTTPException(status_code=500, detail="Explainer not regenerated during startup")
     return _explainer
+
+# 초기화 완료 상태를 반환하는 새로운 의존성 함수
+def get_initialization_status():
+    return _initialization_complete
