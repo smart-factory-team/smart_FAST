@@ -3,6 +3,21 @@ from app.models.model_loader import load_model_file, load_scaler, load_threshold
 
 
 def predict_anomaly(signal_type: str, values: list):
+    """
+    Predicts whether a given signal is anomalous based on its type and values.
+    
+    The function validates the input, preprocesses the signal data, and uses a pre-trained model to compute the mean absolute error (MAE) between the predicted and actual scaled values. It then compares the MAE to a predefined threshold to determine if the signal is anomalous.
+    
+    Parameters:
+        signal_type (str): The type of signal, either "cur" or "vib".
+        values (list): A list of numeric values representing the signal.
+    
+    Returns:
+        dict: A dictionary containing the signal type, computed MAE, threshold, and anomaly status ("anomaly" or "normal").
+    
+    Raises:
+        RuntimeError: If an error occurs during data scaling, reshaping, or prediction.
+    """
     check_input_validation(signal_type, values)
 
     arr = np.array(values).reshape(1, -1)
@@ -30,6 +45,12 @@ def predict_anomaly(signal_type: str, values: list):
 
 
 def check_input_validation(signal_type: str, values: list):
+    """
+    Validate the signal type and values for anomaly prediction input.
+    
+    Raises:
+        ValueError: If the signal type is not a non-empty string, is not "cur" or "vib", if values is not a non-empty list of numbers, or if the list length does not match the expected size for the given signal type.
+    """
     if not isinstance(signal_type, str) or not signal_type.strip():
         raise ValueError("signal_type must be a non-empty string")
 

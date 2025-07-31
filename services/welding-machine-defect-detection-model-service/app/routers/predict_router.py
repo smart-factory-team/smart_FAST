@@ -16,6 +16,17 @@ class PredictionResponse(BaseModel):
 
 @router.post("/predict", response_model=PredictionResponse)
 def predict(data: SensorData):
+    """
+    Handles anomaly prediction requests for sensor data.
+    
+    Accepts validated sensor data, performs anomaly prediction, and returns the prediction result. Responds with appropriate HTTP errors if model files are missing, input data is invalid, or prediction fails.
+    
+    Parameters:
+        data (SensorData): The input sensor data for anomaly detection.
+    
+    Returns:
+        PredictionResponse: The prediction result including signal type, MAE, threshold, and anomaly status.
+    """
     try:
         result = predict_anomaly(data.signal_type, data.values)
         return PredictionResponse(**result)
