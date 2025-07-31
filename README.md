@@ -133,6 +133,8 @@ docker-compose up -d --build
 
 - `GET /` - 서비스 정보
 - `GET /health` - 헬스 체크
+- `GET /ready` - AI 모델 로딩 상태 체크
+- `GET /startup` - 서비스 시작 준비 체크
 - `POST /predict` - AI 모델 예측
 - `POST /predict/file` - 파일 업로드를 통한 예측
 - `GET /model/info` - 모델 정보 조회
