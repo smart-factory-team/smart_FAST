@@ -5,6 +5,7 @@
 
 ## 2. 프로젝트 구조
 
+```
 painting-process-equipment-defect-detection-model-service/
 ├── app/
 │   ├── main.py          # FastAPI 애플리케이션의 메인 진입점 및 라우터 등록
@@ -25,6 +26,7 @@ painting-process-equipment-defect-detection-model-service/
 ├── Dockerfile           # Docker 이미지 빌드 및 컨테이너화 설정
 ├── requirements.txt     # 프로젝트에 필요한 Python 라이브러리 의존성 목록
 └── README.md            # 서비스 개요, 설치/실행 방법, API 엔드포인트 등 문서
+```
 
 ## 3. 설치 및 실행 방법
 
@@ -90,11 +92,12 @@ painting-process-equipment-defect-detection-model-service/
   "current": 72.0,
   "temper": 34.0
 }
-
+```
 
 Response:
 
 200 OK: 분석 결과 로그 (이상 감지 시)
+```json
 {
   "machineId": "MCH-001",
   "timeStamp": "2025-07-23T15:32:01",
@@ -105,6 +108,7 @@ Response:
   "issue": "PAINT-EQ-VOL-HIGH-2025-07-23T15:32:01",
   "isSolved": false
 }
+```
 204 No Content: 이상 감지되지 않은 경우 (오차 임계값 이내)
 422 Unprocessable Entity: 요청 본문 데이터 형식이 올바르지 않은 경우
 500 Internal Server Error: 서버 내부 오류 (설정 로드 실패, 모델 로드 실패 등)
