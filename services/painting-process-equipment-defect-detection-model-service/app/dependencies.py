@@ -1,6 +1,7 @@
 import joblib
 import shap
 import yaml
+import os
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 
@@ -15,7 +16,9 @@ async def load_resources():
     global _model, _explainer, _config, _initialization_complete # 플래그를 global로 선언
 
     # 설정 파일 로드
-    config_path = "app/models/model_config.yaml"
+    # 하드코딩된 경로 대신 환경 변수를 사용하도록 수정
+    # 환경 변수가 없으면 기본값인 "app/models/model_config.yaml"을 사용
+    config_path = os.getenv("MODEL_CONFIG_PATH", "app/models/model_config.yaml")
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             _config = yaml.safe_load(f)
