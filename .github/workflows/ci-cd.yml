@@ -95,7 +95,7 @@ jobs:
             echo "matrix=[]" >> $GITHUB_OUTPUT
           else
             # JSON 배열 형태로 변환
-            MATRIX_JSON=$(echo $SERVICES | tr ' ' '\n' | jq -R . | jq -s .)
+            MATRIX_JSON=$(echo $SERVICES | tr ' ' '\n' | jq -R . | jq -s -c .)
             echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
           fi
           
