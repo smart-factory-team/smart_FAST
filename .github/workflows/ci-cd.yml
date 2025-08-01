@@ -74,7 +74,7 @@ jobs:
             fi
           
             # 변경된 서비스 디렉토리 찾기
-            CHANGED_SERVICES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^service/' | cut -d'/' -f2 | sort -u | tr '\n' ' ')
+            CHANGED_SERVICES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^services/' | cut -d'/' -f2 | sort -u | tr '\n' ' ')
             DETECTION_METHOD="git_diff"
           
             if [ -z "$CHANGED_SERVICES" ]; then
