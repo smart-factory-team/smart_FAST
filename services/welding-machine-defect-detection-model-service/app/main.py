@@ -9,9 +9,6 @@ from app.models.model_loader import load_model_file, load_scaler, load_threshold
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 앱 시작 시 실행
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 앱 시작 시 실행
     try:
         for signal_type in ["cur", "vib"]:
             model_cache[signal_type]["model"] = load_model_file(signal_type)
