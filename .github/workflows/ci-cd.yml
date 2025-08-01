@@ -288,19 +288,19 @@ jobs:
 
           # 순차적으로 배포 (의존성 고려)
           echo "📦 Creating namespace..."
-          envsubst < k8s/common/1-namespace.yaml | kubectl apply -f -
+          envsubst < k8s/common/namespace.yaml | kubectl apply -f -
 
           echo "🔧 Deploying application..."
-          envsubst < k8s/common/2-deployment.yaml | kubectl apply -f -
+          envsubst < k8s/common/deployment.yaml | kubectl apply -f -
 
           echo "🌐 Creating service..."
-          envsubst < k8s/common/3-service.yaml | kubectl apply -f -
+          envsubst < k8s/common/service.yaml | kubectl apply -f -
 
           echo "🌍 Setting up ingress..."
-          envsubst < k8s/common/4-ingress.yaml | kubectl apply -f -
+          envsubst < k8s/common/ingress.yaml | kubectl apply -f -
 
           echo "📈 Configuring auto-scaling..."
-          envsubst < k8s/common/5-hpa.yaml | kubectl apply -f -
+          envsubst < k8s/common/hpa.yaml | kubectl apply -f -
 
           # 배포 상태 확인
           echo "⏳ Waiting for deployment to be ready..."
