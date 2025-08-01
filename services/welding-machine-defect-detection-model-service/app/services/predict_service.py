@@ -1,5 +1,6 @@
 import numpy as np
 from app.models.model_loader import load_model_file, load_scaler, load_threshold
+from app.core.model_cache import model_cache
 
 
 def predict_anomaly(signal_type: str, values: list):
@@ -7,9 +8,10 @@ def predict_anomaly(signal_type: str, values: list):
 
     arr = np.array(values).reshape(1, -1)
 
-    scaler = load_scaler(signal_type)
-    model = load_model_file(signal_type)
-    threshold = load_threshold(signal_type)
+    entry = model_cache[signal_type]
+    scaler = entry["scaler"]
+    model = entry["model"]
+    threshold = entry["threshold"]
 
     try:
         scaled = scaler.transform(arr)
