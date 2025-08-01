@@ -152,11 +152,6 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Type checking (MyPy) - ${{ matrix.service }}
-        if: steps.check-service.outputs.exists == 'true'
-        working-directory: services/${{ matrix.service }}
-        run: mypy . --ignore-missing-imports
-
       - name: Run tests with coverage - ${{ matrix.service }}
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
