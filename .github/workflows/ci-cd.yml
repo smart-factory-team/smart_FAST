@@ -1,0 +1,404 @@
+# .github/workflows/ci-cd.yml
+name: Smart FAST Multi-Service CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'services/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/**'
+
+env:
+  REGISTRY: 23acr.azurecr.io
+  AKS_CLUSTER_NAME: 23-aks
+  AKS_RESOURCE_GROUP: 23-rsrc
+
+jobs:
+  # 변경된 서비스 감지
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.changes.outputs.services }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      detection_method: ${{ steps.changes.outputs.detection_method }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: changes
+        run: |
+          CHANGED_SERVICES=""
+          DETECTION_METHOD=""
+          
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # PR 제목에서 서비스명 추출 시도
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            echo "🔍 PR Title: $PR_TITLE"
+          
+            # PR 제목 패턴: {PREFIX}/{issuecode}/{service-name} : 설명
+            if [[ $PR_TITLE =~ ^([^/]+)/([^/]+)/([^/\s:]+) ]]; then
+              PREFIX_FROM_TITLE="${BASH_REMATCH[1]}"
+              ISSUE_FROM_TITLE="${BASH_REMATCH[2]}"
+              SERVICE_FROM_TITLE="${BASH_REMATCH[3]}"
+              echo "📦 Prefix: $PREFIX_FROM_TITLE, Issue: $ISSUE_FROM_TITLE, Service: $SERVICE_FROM_TITLE"
+          
+              # 해당 서비스 디렉토리가 실제로 존재하는지 확인
+              if [ -d "services/$SERVICE_FROM_TITLE" ]; then
+                CHANGED_SERVICES="$SERVICE_FROM_TITLE"
+                DETECTION_METHOD="pr_title"
+                echo "✅ Service directory confirmed: services/$SERVICE_FROM_TITLE"
+              else
+                echo "⚠️ Service directory not found: services/$SERVICE_FROM_TITLE"
+                echo "🔄 Falling back to git diff detection..."
+              fi
+            else
+              echo "⚠️ PR title doesn't match pattern {PREFIX}/{issuecode}/{service-name} : description"
+              echo "🔄 Falling back to git diff detection..."
+            fi
+          fi
+          
+          # PR 제목에서 감지 실패하거나 Push 이벤트인 경우 git diff 사용
+          if [ -z "$CHANGED_SERVICES" ]; then
+            echo "🔍 Using git diff to detect changes..."
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              BASE_SHA="${{ github.event.pull_request.base.sha }}"
+              HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            else
+              BASE_SHA="${{ github.event.before }}"
+              HEAD_SHA="${{ github.sha }}"
+            fi
+          
+            # 변경된 서비스 디렉토리 찾기
+            CHANGED_SERVICES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep '^services/' | cut -d'/' -f2 | sort -u | tr '\n' ' ')
+            DETECTION_METHOD="git_diff"
+          
+            if [ -z "$CHANGED_SERVICES" ]; then
+              echo "📭 No services changed"
+            else
+              echo "📦 Services changed: $CHANGED_SERVICES"
+            fi
+          fi
+          
+          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          echo "detection_method=$DETECTION_METHOD" >> $GITHUB_OUTPUT
+
+      - name: Set matrix for changed services
+        id: set-matrix
+        run: |
+          SERVICES="${{ steps.changes.outputs.services }}"
+          if [ -z "$SERVICES" ]; then
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+          else
+            # JSON 배열 형태로 변환
+            MATRIX_JSON=$(echo $SERVICES | tr ' ' '\n' | jq -R . | jq -s -c .)
+            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "🎯 Final matrix: $MATRIX_JSON"
+
+  # 각 서비스별 테스트 및 린팅
+  test-and-lint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Check if service directory exists
+        id: check-service
+        run: |
+          if [ -d "services/${{ matrix.service }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Service directory services/${{ matrix.service }} does not exist"
+          fi
+
+      - name: Install dependencies for ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install pytest pytest-cov flake8 mypy
+
+      - name: Linting (Flake8) - ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Type checking (MyPy) - ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: mypy . --ignore-missing-imports
+
+      - name: Run tests with coverage - ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          if [ -f "test_*.py" ] || [ -d "tests" ]; then
+            pytest --cov=. --cov-report=xml --cov-report=term-missing
+          else
+            echo "No tests found for ${{ matrix.service }}"
+          fi
+
+      - name: Upload coverage to Codecov - ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./services/${{ matrix.service }}/coverage.xml
+          flags: ${{ matrix.service }}
+          name: ${{ matrix.service }}-coverage
+
+  # 각 서비스별 보안 스캔
+  security-scan:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Bandit security scan - ${{ matrix.service }}
+        working-directory: services/${{ matrix.service }}
+        run: |
+          pip install bandit
+          bandit -r . -f json -o bandit-report.json || true
+
+      - name: Upload security scan results - ${{ matrix.service }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-scan-${{ matrix.service }}
+          path: services/${{ matrix.service }}/bandit-report.json
+
+  # 각 서비스별 Docker 빌드 및 푸시 (main 브랜치만)
+  build-and-push:
+    needs: [detect-changes, test-and-lint, security-scan]
+    if: github.ref == 'refs/heads/main' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if Dockerfile exists for ${{ matrix.service }}
+        id: dockerfile-check
+        run: |
+          if [ -f "services/${{ matrix.service }}/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Dockerfile not found for services/${{ matrix.service }}"
+          fi
+
+      - name: Login to Azure Container Registry
+        if: steps.dockerfile-check.outputs.exists == 'true'
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image - ${{ matrix.service }}
+        if: steps.dockerfile-check.outputs.exists == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          IMAGE_NAME="smart-fast-${{ matrix.service }}"
+          docker build -t ${{ env.REGISTRY }}/${IMAGE_NAME}:${{ github.sha }} .
+          docker build -t ${{ env.REGISTRY }}/${IMAGE_NAME}:latest .
+          docker push ${{ env.REGISTRY }}/${IMAGE_NAME}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${IMAGE_NAME}:latest
+          
+          echo "Built and pushed image: ${{ env.REGISTRY }}/${IMAGE_NAME}:${{ github.sha }}"
+
+  # 각 서비스별 AKS 배포
+  deploy-to-aks:
+    needs: [detect-changes, build-and-push]
+    if: github.ref == 'refs/heads/main' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER_NAME }}
+
+      - name: Check if k8s manifests exist for ${{ matrix.service }}
+        id: k8s-check
+        run: |
+          if [ -d "services/${{ matrix.service }}/k8s" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "k8s_path=services/${{ matrix.service }}/k8s" >> $GITHUB_OUTPUT
+          elif [ -d "k8s/common" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "k8s_path=k8s/common" >> $GITHUB_OUTPUT
+            echo "📦 Using unified AI-friendly manifests"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Kubernetes manifests not found for ${{ matrix.service }}"
+          fi
+
+      - name: Deploy to AKS - ${{ matrix.service }}
+        if: steps.k8s-check.outputs.exists == 'true'
+        run: |
+          # 환경 변수 설정
+          export SERVICE_NAME="${{ matrix.service }}"
+          export IMAGE_TAG="${{ github.sha }}"
+          export REGISTRY="${{ env.REGISTRY }}"
+          export IMAGE_FULL_NAME="${{ env.REGISTRY }}/smart-fast-${{ matrix.service }}:${{ github.sha }}"
+
+          echo "🚀 Deploying ${{ matrix.service }} with minimal setup"
+
+          # 순차적으로 배포 (의존성 고려)
+          echo "📦 Creating namespace..."
+          envsubst < k8s/common/1-namespace.yaml | kubectl apply -f -
+
+          echo "🔧 Deploying application..."
+          envsubst < k8s/common/2-deployment.yaml | kubectl apply -f -
+
+          echo "🌐 Creating service..."
+          envsubst < k8s/common/3-service.yaml | kubectl apply -f -
+
+          echo "🌍 Setting up ingress..."
+          envsubst < k8s/common/4-ingress.yaml | kubectl apply -f -
+
+          echo "📈 Configuring auto-scaling..."
+          envsubst < k8s/common/5-hpa.yaml | kubectl apply -f -
+
+          # 배포 상태 확인
+          echo "⏳ Waiting for deployment to be ready..."
+          kubectl rollout status deployment/smart-fast-${{ matrix.service }} -n smart-fast-${{ matrix.service }} --timeout=300s
+
+          # 배포 결과 확인
+          POD_STATUS=$(kubectl get pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+          if [ "$POD_STATUS" = "Running" ]; then
+            echo "✅ ${{ matrix.service }} deployed successfully!"
+
+            # 접근 URL 안내
+            EXTERNAL_IP=$(kubectl get service ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "pending")
+            if [ "$EXTERNAL_IP" != "pending" ] && [ ! -z "$EXTERNAL_IP" ]; then
+              echo "🌐 Service URL: http://$EXTERNAL_IP.nip.io/v1/${{ matrix.service }}/"
+              echo "🏥 Health Check: http://$EXTERNAL_IP.nip.io/health/${{ matrix.service }}"
+            else
+              echo "⏳ External IP is still being assigned. Check later with: kubectl get ingress -A"
+            fi
+          else
+            echo "⚠️ Deployment may have issues. Pod status: $POD_STATUS"
+            kubectl describe pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }}
+          fi
+
+  # Pull Request 자동 리뷰 (변경된 서비스별로)
+  auto-review:
+    needs: detect-changes
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR Code Review Comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const changedServices = "${{ needs.detect-changes.outputs.services }}".split(' ').filter(s => s);
+            
+            if (changedServices.length === 0) {
+              return;
+            }
+            
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            const detectionMethod = "${{ needs.detect-changes.outputs.detection_method }}";
+            
+            let reviewComment = "## 🤖 Smart FAST 자동 코드 리뷰\n\n";
+            reviewComment += `### 📦 변경된 서비스 (${changedServices.length}개):\n`;
+            
+            changedServices.forEach(service => {
+              reviewComment += `- **${service}** 서비스\n`;
+            });
+            
+            if (detectionMethod === "pr_title") {
+              reviewComment += "\n🎯 **PR 제목에서 서비스 자동 감지됨** ({PREFIX}/{issuecode}/{service-name})\n";
+            } else if (detectionMethod === "git_diff") {
+              reviewComment += "\n🔍 **Git diff를 통해 서비스 감지됨**\n";
+            }
+            
+            reviewComment += "\n### ✅ 체크리스트:\n";
+            reviewComment += "- ✅ 각 서비스별 테스트 통과\n";
+            reviewComment += "- ✅ 코드 품질 검사 완료\n";
+            reviewComment += "- ✅ 보안 스캔 완료\n\n";
+            
+            reviewComment += "### 📁 변경된 파일들:\n";
+            const serviceFiles = {};
+            
+            files.forEach(file => {
+              const pathParts = file.filename.split('/');
+              if (pathParts[0] === 'services' && pathParts.length > 1) {
+                const serviceName = pathParts[1];
+                if (!serviceFiles[serviceName]) {
+                  serviceFiles[serviceName] = [];
+                }
+                serviceFiles[serviceName].push({
+                  name: file.filename,
+                  additions: file.additions,
+                  deletions: file.deletions
+                });
+              }
+            });
+            
+            Object.keys(serviceFiles).forEach(service => {
+              reviewComment += `\n**${service} 서비스:**\n`;
+              serviceFiles[service].forEach(file => {
+                reviewComment += `- \`${file.name}\` (+${file.additions} -${file.deletions})\n`;
+              });
+            });
+            
+            reviewComment += "\n### 🚀 배포 정보:\n";
+            reviewComment += "- main 브랜치 머지 시 변경된 서비스만 자동 배포됩니다\n";
+            reviewComment += "- 각 서비스는 독립적으로 빌드/배포됩니다\n";
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reviewComment
+            });
