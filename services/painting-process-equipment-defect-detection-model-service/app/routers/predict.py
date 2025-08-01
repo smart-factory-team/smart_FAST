@@ -45,7 +45,7 @@ async def predict_issue_from_file(
     CSV 파일 업로드를 통해 E-coating 공정 데이터를 분석하고 예측합니다.
     파일 내 각 행에 대해 예측을 수행하며, 문제가 발견되면 로그를 생성합니다.
     """
-    if not file.filename.endswith(".csv"):
+    if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed for file prediction.")
     try:
         contents = await file.read()

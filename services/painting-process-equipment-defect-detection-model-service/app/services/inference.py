@@ -90,7 +90,7 @@ def _predict_and_analyze(
     shap_sum = sum(shap_dict.values())
 
     # 주요 원인 분석
-    main_cause = max(shap_dict, key=shap_dict.get)
+    main_cause = max(shap_dict, key=lambda k: shap_dict[k])
     main_value = shap_raw_dict[main_cause]
 
     # 이슈 코드 생성

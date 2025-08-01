@@ -1,7 +1,6 @@
 import joblib
 import shap
 import yaml
-import os
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 
@@ -31,7 +30,7 @@ async def load_resources(config_path: str = "app/models/model_config.yaml"):
         model_path = _config["model"]["model_path"]
     except KeyError as e:
         print(f"오류: 설정 파일에 필수 키가 누락되었습니다: {e}")
-        raise KeyError(f"Missing required key in configuration file: {e}") from None
+        raise KeyError(f"Missing required key in configuration file: {e}") from e
 
     if not model_path:
         print("오류: 설정 파일에 모델 경로가 정의되지 않았습니다.")
@@ -50,7 +49,7 @@ async def load_resources(config_path: str = "app/models/model_config.yaml"):
 
     except FileNotFoundError:
         print("오류: 모델 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
-        raise FileNotFoundError("Model file not found at specified path.")
+        raise FileNotFoundError("Model file not found at specified path.") from None
     except Exception as e:
         # Reset global state on failure
         _model = None
