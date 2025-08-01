@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 애플리케이션 코드 및 모델/임계치 파일 복사 
+# 애플리케이션 코드 복사 
 COPY app/ ./app/
-COPY static/ ./static/
 
 EXPOSE 8006
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8006"]
