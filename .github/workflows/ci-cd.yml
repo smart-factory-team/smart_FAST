@@ -11,6 +11,14 @@ on:
     paths:
       - 'services/**'
 
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  actions: read
+  packages: write
+  id-token: write
+
 env:
   REGISTRY: 23acr.azurecr.io
   AKS_CLUSTER_NAME: 23-aks
@@ -187,7 +195,7 @@ jobs:
           bandit -r . -f json -o bandit-report.json || true
 
       - name: Upload security scan results - ${{ matrix.service }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-scan-${{ matrix.service }}
           path: services/${{ matrix.service }}/bandit-report.json
