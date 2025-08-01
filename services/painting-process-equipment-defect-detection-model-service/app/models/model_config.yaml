@@ -1,6 +1,9 @@
 model:
   name: random_forest
-  model_path: app/models/Ecoating_model.pkl
+  # Hugging Face Hub 리포지토리와 파일명으로 경로를 변경합니다.
+  # "HuggingFace_Repo_ID::파일명" 형식으로 표기하면 더 명확합니다.
+  model_repo_id: "23smartfactory/Ecoating_model"
+  model_filename: "Ecoating_model.pkl"
 
 training:
   random_state: 42
