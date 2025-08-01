@@ -1,6 +1,6 @@
 import pandas as pd
 from fastapi import HTTPException
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from ..services.utils import IssueLogInput
 
@@ -22,13 +22,13 @@ def _validate_input_ranges(input_data: IssueLogInput, config: dict) -> Optional[
         log_issue_codes = config["logs"]["log_issue_codes"]
     except KeyError as e:
         print(f"오류: 설정 파일에 필수 키가 누락되었습니다: {e}")
-        raise HTTPException(status_code=500, detail=f"Configuration error: Missing key {e}") from None
+        raise HTTPException(status_code=500, detail=f"Configuration error: Missing key {e}") from e
 
-    if not (voltage_range[0] < input_data.voltage < voltage_range[1]):
+    if not (voltage_range[0] <= input_data.voltage <= voltage_range[1]):
         return log_issue_codes["voltage_invalid"]
-    elif not (current_range[0] < input_data.current < current_range[1]):
+    elif not (current_range[0] <= input_data.current <= current_range[1]):
         return log_issue_codes["current_invalid"]
-    elif not (temperature_range[0] < input_data.temper < temperature_range[1]):
+    elif not (temperature_range[0] <= input_data.temper <= temperature_range[1]):
         return log_issue_codes["temperature_invalid"]
     
     return None
@@ -58,7 +58,7 @@ def _predict_and_analyze(
         log_issue_codes = config["logs"]["log_issue_codes"]
     except KeyError as e:
         print(f"오류: 설정 파일에 필수 키가 누락되었습니다: {e}")
-        raise HTTPException(status_code=500, detail=f"Configuration error: Missing key {e}") from None
+        raise HTTPException(status_code=500, detail=f"Configuration error: Missing key {e}") from e
 
     # 입력 포맷 준비
     X_input_data = {
@@ -119,8 +119,8 @@ def _predict_and_analyze(
 # MAIN ANALYSIS FUNCTION
 def analyze_issue_log_api(
     input_data: IssueLogInput,
-    model,
-    explainer,
+    model: Any,  # or specific model type if available
+    explainer: Any,  # or shap.TreeExplainer
     config: dict
 ):
     """
