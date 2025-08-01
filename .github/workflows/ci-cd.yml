@@ -53,13 +53,14 @@ jobs:
             echo "🔍 Length: ${#SERVICE_NAME}"
           
             # 서비스 디렉토리 확인
-              if [ -d "services/$SERVICE_NAME" ]; then
-                echo "✅ Service directory found: services/$SERVICE_NAME"
-                SERVICES="$SERVICE_NAME"
-              else
-                echo "❌ Service directory not found: services/$SERVICE_NAME"
-                SERVICES=""
+            if [ -d "services/$SERVICE_NAME" ]; then
+              echo "✅ Service directory found: services/$SERVICE_NAME"
+              SERVICES="$SERVICE_NAME"
+            else
+              echo "❌ Service directory not found: services/$SERVICE_NAME"
+              SERVICES=""
             fi
+          fi
           
           # PR 제목에서 감지 실패하거나 Push 이벤트인 경우 git diff 사용
           if [ -z "$CHANGED_SERVICES" ]; then
