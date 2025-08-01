@@ -1,6 +1,4 @@
 import numpy as np
-import numpy as np
-from app.core.model_cache import model_cache
 from app.core.model_cache import model_cache
 
 
