@@ -9,10 +9,16 @@ from app.models.model_loader import load_model_file, load_scaler, load_threshold
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 앱 시작 시 실행
-    for signal_type in ["cur", "vib"]:
-        model_cache[signal_type]["model"] = load_model_file(signal_type)
-        model_cache[signal_type]["scaler"] = load_scaler(signal_type)
-        model_cache[signal_type]["threshold"] = load_threshold(signal_type)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 앱 시작 시 실행
+    try:
+        for signal_type in ["cur", "vib"]:
+            model_cache[signal_type]["model"] = load_model_file(signal_type)
+            model_cache[signal_type]["scaler"] = load_scaler(signal_type)
+            model_cache[signal_type]["threshold"] = load_threshold(signal_type)
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize models: {str(e)}") from e
     yield
 
 
