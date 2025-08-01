@@ -12,20 +12,16 @@ _explainer: Optional[Any] = None
 _initialization_complete: bool = False  # 초기화 완료 상태를 추적하는 플래그
 
 # 애플리케이션 시작 시 설정 파일, 모델 로드 및 explainer 재생성 함수
-async def load_resources():
+async def load_resources(config_path: str = "app/models/model_config.yaml"):
     global _model, _explainer, _config, _initialization_complete # 플래그를 global로 선언
 
-    # 설정 파일 로드
-    # 하드코딩된 경로 대신 환경 변수를 사용하도록 수정
-    # 환경 변수가 없으면 기본값인 "app/models/model_config.yaml"을 사용
-    config_path = os.getenv("MODEL_CONFIG_PATH", "app/models/model_config.yaml")
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             _config = yaml.safe_load(f)
         print("설정 파일 로드 완료")
     except FileNotFoundError:
         print(f"오류: 설정 파일을 찾을 수 없습니다. 경로를 확인해주세요: {config_path}")
-        raise FileNotFoundError(f"Configuration file not found at {config_path}") from None
+        raise FileNotFoundError(f"Configuration file not found at {config_path}")
     except Exception as e:
         print(f"설정 파일 로드 중 오류 발생: {e}")
         raise RuntimeError(f"Failed to load configuration file: {e}") from e
@@ -35,7 +31,7 @@ async def load_resources():
         model_path = _config["model"]["model_path"]
     except KeyError as e:
         print(f"오류: 설정 파일에 필수 키가 누락되었습니다: {e}")
-        raise KeyError(f"Missing required key in configuration file: {e}") from e
+        raise KeyError(f"Missing required key in configuration file: {e}") from None
 
     if not model_path:
         print("오류: 설정 파일에 모델 경로가 정의되지 않았습니다.")
@@ -54,8 +50,13 @@ async def load_resources():
 
     except FileNotFoundError:
         print("오류: 모델 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
-        raise FileNotFoundError("Model file not found at specified path.") from None
+        raise FileNotFoundError("Model file not found at specified path.")
     except Exception as e:
+        # Reset global state on failure
+        _model = None
+        _config = None
+        _explainer = None
+        _initialization_complete = False
         print(f"모델 로드 또는 explainer 재생성 중 오류 발생: {e}")
         raise RuntimeError(f"Failed to load model or regenerate explainer: {e}") from e
 
