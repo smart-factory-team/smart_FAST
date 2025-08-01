@@ -2,13 +2,13 @@ import joblib
 import shap
 import yaml
 from fastapi import HTTPException
-from datetime import datetime
+from typing import Optional, Dict, Any
 
 # 전역 변수 초기화
-_model = None
-_config = None
-_explainer = None
-_initialization_complete = False # 초기화 완료 상태를 추적하는 플래그
+_model: Optional[Any] = None
+_config: Optional[Dict[str, Any]] = None
+_explainer: Optional[Any] = None
+_initialization_complete: bool = False  # 초기화 완료 상태를 추적하는 플래그
 
 # 애플리케이션 시작 시 설정 파일, 모델 로드 및 explainer 재생성 함수
 async def load_resources():
