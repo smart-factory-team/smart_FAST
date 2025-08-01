@@ -1,5 +1,6 @@
 import numpy as np
-from app.models.model_loader import load_model_file, load_scaler, load_threshold
+import numpy as np
+from app.core.model_cache import model_cache
 from app.core.model_cache import model_cache
 
 
