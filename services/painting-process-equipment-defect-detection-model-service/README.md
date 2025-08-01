@@ -5,7 +5,7 @@
 
 ## 2. 프로젝트 구조
 
-```
+```text
 painting-process-equipment-defect-detection-model-service/
 ├── app/
 │   ├── main.py          # FastAPI 애플리케이션의 메인 진입점 및 라우터 등록
@@ -113,4 +113,4 @@ Response:
 422 Unprocessable Entity: 요청 본문 데이터 형식이 올바르지 않은 경우
 500 Internal Server Error: 서버 내부 오류 (설정 로드 실패, 모델 로드 실패 등)
 
-- 로그 파일은 model_config.yaml에 설정된 logs.file_path에 저장됩니다.
+* 로그 파일은 model_config.yaml에 설정된 logs.file_path에 저장됩니다.

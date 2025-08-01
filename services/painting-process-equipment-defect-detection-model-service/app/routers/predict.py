@@ -77,4 +77,4 @@ async def predict_issue_from_file(
         return {"filename": file.filename, "predictions": results}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"File processing error: {e}")
+        raise HTTPException(status_code=500, detail=f"File processing error: {e}") from e

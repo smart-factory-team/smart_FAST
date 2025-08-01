@@ -37,3 +37,4 @@ validation:
   voltage_range: [20, 350]
   current_range: [5, 400]
   temperature_range: [25, 40]
+  

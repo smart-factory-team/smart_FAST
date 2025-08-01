@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .dependencies import load_resources, get_config, get_model, get_explainer
+from .dependencies import load_resources
 # routers 디렉토리의 모듈 임포트
 from .routers import health, info, predict, model_info
 

@@ -50,8 +50,8 @@ async def load_resources():
         print("애플리케이션 초기화 완료")
 
     except FileNotFoundError:
-        print(f"오류: 모델 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
-        raise FileNotFoundError(f"Model file not found at specified path.") from None
+        print("오류: 모델 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+        raise FileNotFoundError("Model file not found at specified path.") from None
     except Exception as e:
         print(f"모델 로드 또는 explainer 재생성 중 오류 발생: {e}")
         raise RuntimeError(f"Failed to load model or regenerate explainer: {e}") from e
