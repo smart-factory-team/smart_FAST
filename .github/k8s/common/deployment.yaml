@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-fast-${SERVICE_NAME}
+  namespace: smart-fast-${SERVICE_NAME}
+  labels:
+    app: smart-fast-${SERVICE_NAME}
+    service: ${SERVICE_NAME}
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: smart-fast-${SERVICE_NAME}
+  template:
+    metadata:
+      labels:
+        app: smart-fast-${SERVICE_NAME}
+        service: ${SERVICE_NAME}
+    spec:
+      containers:
+        - name: ${SERVICE_NAME}
+          image: ${IMAGE_FULL_NAME}
+          ports:
+            - containerPort: 8000
+              name: http
+
+          # 🌍 환경 변수 직접 설정
+          env:
+            # 기본 서비스 설정
+            - name: SERVICE_NAME
+              value: "${SERVICE_NAME}"
+            - name: SERVICE_PORT
+              value: "8000"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: DEBUG
+              value: "false"
+
+          # 필요시 주석 해제하여 사용
+          # 데이터베이스 설정
+          # - name: DATABASE_URL
+          #   value: "postgresql://user:password@localhost:5432/smartfast"
+          # - name: DATABASE_HOST
+          #   value: "localhost"
+          # - name: DATABASE_PORT
+          #   value: "5432"
+          # - name: DATABASE_NAME
+          #   value: "smartfast"
+          # - name: DATABASE_USER
+          #   value: "smartfast_user"
+          # - name: DATABASE_PASSWORD
+          #   value: "your_password_here"
+
+          # Redis 설정
+          # - name: REDIS_URL
+          #   value: "redis://localhost:6379/0"
+          # - name: REDIS_HOST
+          #   value: "localhost"
+          # - name: REDIS_PORT
+          #   value: "6379"
+
+          # JWT 설정
+          # - name: JWT_SECRET
+          #   value: "your-jwt-secret-key-here"
+          # - name: JWT_ALGORITHM
+          #   value: "HS256"
+          # - name: JWT_EXPIRE_MINUTES
+          #   value: "30"
+
+          # AI 모델 설정 (AI 서비스용)
+          # - name: MODEL_CACHE_DIR
+          #   value: "/tmp/models"
+          # - name: HF_HOME
+          #   value: "/tmp/cache"
+          # - name: TRANSFORMERS_CACHE
+          #   value: "/tmp/cache/transformers"
+          # - name: TOKENIZER_PARALLELISM
+          #   value: "false"
+
+          # 외부 API 키들
+          # - name: OPENAI_API_KEY
+          #   value: "sk-your-openai-api-key-here"
+          # - name: HUGGINGFACE_API_TOKEN
+          #   value: "hf_your-huggingface-token-here"
+
+          # 기본 리소스 설정 (필요에 따라 조정)
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+              ephemeral-storage: "1Gi"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "2Gi"
+
+          # 헬스체크 (빠른 시작)
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+
+          # 보안 설정
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false  # /tmp 쓰기 허용
+
+          # 임시 디렉토리 볼륨 마운트
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          # 라이프사이클 훅
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep 15
+
+      # 종료 대기 시간
+      terminationGracePeriodSeconds: 30
+
+      # 볼륨 정의
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi

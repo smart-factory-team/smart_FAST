@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smart-fast-${SERVICE_NAME}
+  labels:
+    app: smart-fast
+    service: ${SERVICE_NAME}
+    managed-by: github-actions
+    ai-enabled: "true"
