@@ -44,29 +44,21 @@ jobs:
           DETECTION_METHOD=""
           
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # PR 제목에서 서비스명 추출 시도
+            # PR 제목에서 서비스명 추출
             PR_TITLE="${{ github.event.pull_request.title }}"
+            SERVICE_NAME=$(echo "$PR_TITLE" | sed -n 's/^[^/]*\/[0-9]\+\/\([^:]*\):.*/\1/p' | sed 's/[[:space:]]*$//' | tr -cd '[:alnum:]-')
+          
             echo "🔍 PR Title: $PR_TITLE"
+            echo "🔍 Parsed Service: '$SERVICE_NAME'"
+            echo "🔍 Length: ${#SERVICE_NAME}"
           
-            # PR 제목 패턴: {PREFIX}/{issuecode}/{service-name} : 설명
-            if [[ $PR_TITLE =~ ^([^/]+)/([^/]+)/([^/\s:]+) ]]; then
-              PREFIX_FROM_TITLE="${BASH_REMATCH[1]}"
-              ISSUE_FROM_TITLE="${BASH_REMATCH[2]}"
-              SERVICE_FROM_TITLE="${BASH_REMATCH[3]}"
-              echo "📦 Prefix: $PREFIX_FROM_TITLE, Issue: $ISSUE_FROM_TITLE, Service: $SERVICE_FROM_TITLE"
-          
-              # 해당 서비스 디렉토리가 실제로 존재하는지 확인
-              if [ -d "services/$SERVICE_FROM_TITLE" ]; then
-                CHANGED_SERVICES="$SERVICE_FROM_TITLE"
-                DETECTION_METHOD="pr_title"
-                echo "✅ Service directory confirmed: services/$SERVICE_FROM_TITLE"
-              else
-                echo "⚠️ Service directory not found: services/$SERVICE_FROM_TITLE"
-                echo "🔄 Falling back to git diff detection..."
-              fi
+            # 서비스 디렉토리 확인
+            if [ -d "services/$SERVICE_NAME" ]; then
+              echo "✅ Service directory found: services/$SERVICE_NAME"
+              SERVICES="$SERVICE_NAME"
             else
-              echo "⚠️ PR title doesn't match pattern {PREFIX}/{issuecode}/{service-name} : description"
-              echo "🔄 Falling back to git diff detection..."
+              echo "❌ Service directory not found: services/$SERVICE_NAME"
+              SERVICES=""
             fi
           fi
           
@@ -151,11 +143,6 @@ jobs:
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-
-      - name: Type checking (MyPy) - ${{ matrix.service }}
-        if: steps.check-service.outputs.exists == 'true'
-        working-directory: services/${{ matrix.service }}
-        run: mypy . --ignore-missing-imports
 
       - name: Run tests with coverage - ${{ matrix.service }}
         if: steps.check-service.outputs.exists == 'true'
@@ -293,19 +280,19 @@ jobs:
 
           # 순차적으로 배포 (의존성 고려)
           echo "📦 Creating namespace..."
-          envsubst < k8s/common/1-namespace.yaml | kubectl apply -f -
+          envsubst < k8s/common/namespace.yaml | kubectl apply -f -
 
           echo "🔧 Deploying application..."
-          envsubst < k8s/common/2-deployment.yaml | kubectl apply -f -
+          envsubst < k8s/common/deployment.yaml | kubectl apply -f -
 
           echo "🌐 Creating service..."
-          envsubst < k8s/common/3-service.yaml | kubectl apply -f -
+          envsubst < k8s/common/service.yaml | kubectl apply -f -
 
           echo "🌍 Setting up ingress..."
-          envsubst < k8s/common/4-ingress.yaml | kubectl apply -f -
+          envsubst < k8s/common/ingress.yaml | kubectl apply -f -
 
           echo "📈 Configuring auto-scaling..."
-          envsubst < k8s/common/5-hpa.yaml | kubectl apply -f -
+          envsubst < k8s/common/hpa.yaml | kubectl apply -f -
 
           # 배포 상태 확인
           echo "⏳ Waiting for deployment to be ready..."

@@ -116,7 +116,7 @@ class TestSensorDataValidation:
     def test_sensor_data_empty_values(self):
         """Test SensorData with empty values list."""
         data = {"signal_type": "vib", "values": []}
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError):
             SensorData(**data)
 
     def test_sensor_data_mixed_numeric_types(self):
