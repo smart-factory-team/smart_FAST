@@ -4,9 +4,9 @@ import pandas as pd
 from io import StringIO
 from datetime import datetime
 
-from ..services.inference import analyze_issue_log_api as run_analysis
-from ..services.utils import save_issue_log, IssueLogInput
-from ..dependencies import get_config, get_model, get_explainer
+from app.services.inference import analyze_issue_log_api as run_analysis
+from app.services.utils import save_issue_log, IssueLogInput
+from app.dependencies import get_config, get_model, get_explainer
 
 router = APIRouter()
 

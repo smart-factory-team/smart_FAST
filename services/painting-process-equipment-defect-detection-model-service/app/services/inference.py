@@ -2,7 +2,7 @@ import pandas as pd
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
 
-from ..services.utils import IssueLogInput
+from app.services.utils import IssueLogInput
 
 def _validate_input_ranges(input_data: IssueLogInput, config: dict) -> Optional[str]:
     """
