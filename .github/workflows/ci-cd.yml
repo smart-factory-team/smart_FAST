@@ -315,85 +315,231 @@ jobs:
             echo "⚠️ Deployment may have issues. Pod status: $POD_STATUS"
             kubectl describe pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }}
           fi
-
-  # Pull Request 자동 리뷰 (변경된 서비스별로)
+  # Pull Request 자동 리뷰 (모든 검사 완료 후)
   auto-review:
-    needs: detect-changes
-    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
+    needs: [ detect-changes, test-and-lint, security-scan ]
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != '' && always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: PR Code Review Comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changedServices = "${{ needs.detect-changes.outputs.services }}".split(' ').filter(s => s);
-            
+            const changedServices = "${{ needs.detect-changes.outputs.services }}".split(' ').filter(s => s.trim());
+
             if (changedServices.length === 0) {
+              console.log('No services detected, skipping review comment');
               return;
             }
-            
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            
-            const detectionMethod = "${{ needs.detect-changes.outputs.detection_method }}";
-            
-            let reviewComment = "## 🤖 Smart FAST 자동 코드 리뷰\n\n";
-            reviewComment += `### 📦 변경된 서비스 (${changedServices.length}개):\n`;
-            
-            changedServices.forEach(service => {
-              reviewComment += `- **${service}** 서비스\n`;
-            });
-            
-            if (detectionMethod === "pr_title") {
-              reviewComment += "\n🎯 **PR 제목에서 서비스 자동 감지됨** ({PREFIX}/{issuecode}/{service-name})\n";
-            } else if (detectionMethod === "git_diff") {
-              reviewComment += "\n🔍 **Git diff를 통해 서비스 감지됨**\n";
-            }
-            
-            reviewComment += "\n### ✅ 체크리스트:\n";
-            reviewComment += "- ✅ 각 서비스별 테스트 통과\n";
-            reviewComment += "- ✅ 코드 품질 검사 완료\n";
-            reviewComment += "- ✅ 보안 스캔 완료\n\n";
-            
-            reviewComment += "### 📁 변경된 파일들:\n";
-            const serviceFiles = {};
-            
-            files.forEach(file => {
-              const pathParts = file.filename.split('/');
-              if (pathParts[0] === 'services' && pathParts.length > 1) {
-                const serviceName = pathParts[1];
-                if (!serviceFiles[serviceName]) {
-                  serviceFiles[serviceName] = [];
+
+            console.log('Changed services:', changedServices);
+
+            try {
+              const detectionMethod = "${{ needs.detect-changes.outputs.detection_method }}";
+              const prTitle = "${{ github.event.pull_request.title }}";
+
+              // 각 작업의 결과 수집
+              const testResult = "${{ needs.test-and-lint.result }}";
+              const securityResult = "${{ needs.security-scan.result }}";
+
+              // 테스트 결과 파싱
+              const testOutputs = {
+                total: "${{ needs.test-and-lint.outputs.total_tests || '0' }}",
+                passed: "${{ needs.test-and-lint.outputs.passed_tests || '0' }}",
+                failed: "${{ needs.test-and-lint.outputs.failed_tests || '0' }}",
+                skipped: "${{ needs.test-and-lint.outputs.skipped_tests || '0' }}",
+                coverage: "${{ needs.test-and-lint.outputs.coverage || 'N/A' }}",
+                failedTests: "${{ needs.test-and-lint.outputs.failed_test_names || '' }}",
+                lintErrors: "${{ needs.test-and-lint.outputs.lint_errors || '0' }}",
+                lintWarnings: "${{ needs.test-and-lint.outputs.lint_warnings || '0' }}"
+              };
+
+              // 보안 스캔 결과
+              const securityOutputs = {
+                highIssues: "${{ needs.security-scan.outputs.high_issues || '0' }}",
+                mediumIssues: "${{ needs.security-scan.outputs.medium_issues || '0' }}",
+                lowIssues: "${{ needs.security-scan.outputs.low_issues || '0' }}",
+                totalIssues: "${{ needs.security-scan.outputs.total_issues || '0' }}",
+                securityDetails: "${{ needs.security-scan.outputs.security_details || '' }}"
+              };
+
+              let reviewComment = "## 🤖 Smart FAST 자동 코드 리뷰\n\n";
+              reviewComment += `### 📦 변경된 서비스 (${changedServices.length}개):\n`;
+
+              changedServices.forEach(service => {
+                reviewComment += `- **${service}** 서비스\n`;
+              });
+
+              // 감지 방법에 따른 메시지
+              if (detectionMethod === "pr_title") {
+                reviewComment += "\n🎯 **PR 제목에서 서비스 자동 감지됨**\n";
+                reviewComment += `- 제목: \`${prTitle}\`\n`;
+              } else if (detectionMethod === "git_diff") {
+                reviewComment += "\n🔍 **Git diff를 통해 서비스 감지됨**\n";
+              }
+
+              // 전체 상태 요약
+              reviewComment += "\n### 📊 전체 검사 결과:\n";
+              const allPassed = testResult === 'success' && securityResult === 'success';
+
+              if (allPassed) {
+                reviewComment += "✅ **모든 검사 통과** - 배포 준비 완료!\n";
+              } else {
+                reviewComment += "⚠️ **일부 검사에서 문제 발견** - 확인 필요\n";
+              }
+
+              // 테스트 & 린트 결과 섹션
+              reviewComment += "\n### 🧪 테스트 & 코드 품질 결과:\n";
+
+              if (testResult === 'success') {
+                reviewComment += "✅ **테스트 & 린트 통과**\n";
+              } else if (testResult === 'failure') {
+                reviewComment += "❌ **테스트 & 린트 실패**\n";
+              } else if (testResult === 'skipped') {
+                reviewComment += "⏭️ **테스트 & 린트 스킵됨**\n";
+              } else {
+                reviewComment += "⚠️ **테스트 & 린트 상태 불명**\n";
+              }
+
+              // 테스트 통계
+              if (testOutputs.total !== '0') {
+                reviewComment += `- **총 테스트**: ${testOutputs.total}개\n`;
+                reviewComment += `- **성공**: ${testOutputs.passed}개 ✅\n`;
+
+                if (testOutputs.failed !== '0') {
+                  reviewComment += `- **실패**: ${testOutputs.failed}개 ❌\n`;
                 }
-                serviceFiles[serviceName].push({
-                  name: file.filename,
-                  additions: file.additions,
-                  deletions: file.deletions
+
+                if (testOutputs.skipped !== '0') {
+                  reviewComment += `- **스킵**: ${testOutputs.skipped}개 ⏭️\n`;
+                }
+
+                if (testOutputs.coverage !== 'N/A') {
+                  reviewComment += `- **커버리지**: ${testOutputs.coverage}%\n`;
+                }
+              }
+
+              // 린트 결과
+              if (testOutputs.lintErrors !== '0' || testOutputs.lintWarnings !== '0') {
+                reviewComment += `- **린트 오류**: ${testOutputs.lintErrors}개\n`;
+                reviewComment += `- **린트 경고**: ${testOutputs.lintWarnings}개\n`;
+              }
+
+              // 실패한 테스트 상세 정보
+              if (testOutputs.failedTests) {
+                reviewComment += "\n**🔍 실패한 테스트:**\n";
+                const failedTestsList = testOutputs.failedTests.split(',').filter(t => t.trim());
+                failedTestsList.forEach(test => {
+                  reviewComment += `- \`${test.trim()}\`\n`;
                 });
               }
-            });
-            
-            Object.keys(serviceFiles).forEach(service => {
-              reviewComment += `\n**${service} 서비스:**\n`;
-              serviceFiles[service].forEach(file => {
-                reviewComment += `- \`${file.name}\` (+${file.additions} -${file.deletions})\n`;
+
+              // 보안 스캔 결과 섹션
+              reviewComment += "\n### 🔒 보안 스캔 결과:\n";
+
+              if (securityResult === 'success') {
+                reviewComment += "✅ **보안 검사 통과**\n";
+              } else if (securityResult === 'failure') {
+                reviewComment += "❌ **보안 이슈 발견**\n";
+              } else if (securityResult === 'skipped') {
+                reviewComment += "⏭️ **보안 스캔 스킵됨**\n";
+              } else {
+                reviewComment += "⚠️ **보안 스캔 상태 불명**\n";
+              }
+
+              if (securityOutputs.totalIssues !== '0') {
+                reviewComment += `- **총 보안 이슈**: ${securityOutputs.totalIssues}개\n`;
+
+                if (securityOutputs.highIssues !== '0') {
+                  reviewComment += `  - 🔴 **High**: ${securityOutputs.highIssues}개\n`;
+                }
+                if (securityOutputs.mediumIssues !== '0') {
+                  reviewComment += `  - 🟡 **Medium**: ${securityOutputs.mediumIssues}개\n`;
+                }
+                if (securityOutputs.lowIssues !== '0') {
+                  reviewComment += `  - 🟢 **Low**: ${securityOutputs.lowIssues}개\n`;
+                }
+
+                // 보안 이슈 상세 정보
+                if (securityOutputs.securityDetails) {
+                  reviewComment += "\n**🚨 주요 보안 이슈:**\n";
+                  const securityDetailsList = securityOutputs.securityDetails.split(',').filter(d => d.trim());
+                  securityDetailsList.forEach(detail => {
+                    reviewComment += `- ${detail.trim()}\n`;
+                  });
+                }
+              } else {
+                reviewComment += "- 보안 이슈가 발견되지 않았습니다 ✅\n";
+              }
+
+              // 종합 체크리스트
+              reviewComment += "\n### ✅ 검사 체크리스트:\n";
+              reviewComment += testResult === 'success' ? 
+                "- ✅ 테스트 통과\n" : 
+                "- ❌ 테스트 실패\n";
+              reviewComment += testOutputs.lintErrors === '0' ? 
+                "- ✅ 코드 품질 검사 통과\n" : 
+                "- ❌ 린트 오류 발견\n";
+              reviewComment += securityResult === 'success' ? 
+                "- ✅ 보안 스캔 통과\n" : 
+                "- ❌ 보안 이슈 발견\n";
+
+              // 배포 정보
+              reviewComment += "\n### 🚀 배포 정보:\n";
+              if (allPassed) {
+                reviewComment += "- ✅ **모든 검사 통과** - 배포 준비 완료\n";
+                reviewComment += "- 🔄 main 브랜치 머지 시 자동 배포됩니다\n";
+                reviewComment += "- 🏗️ 각 서비스는 독립적으로 빌드/배포됩니다\n";
+              } else {
+                reviewComment += "- ⚠️ **검사 실패** - 문제 해결 후 배포 가능\n";
+                if (testResult !== 'success') {
+                  reviewComment += "  - 🧪 테스트 문제 해결 필요\n";
+                }
+                if (securityResult !== 'success') {
+                  reviewComment += "  - 🔒 보안 이슈 해결 필요\n";
+                }
+              }
+              reviewComment += "- 📋 상세 로그는 Actions 탭에서 확인 가능\n";
+
+              // 기존 자동 리뷰 코멘트가 있는지 확인하고 업데이트
+              const { data: comments } = await github.rest.issues.listComments({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
               });
-            });
-            
-            reviewComment += "\n### 🚀 배포 정보:\n";
-            reviewComment += "- main 브랜치 머지 시 변경된 서비스만 자동 배포됩니다\n";
-            reviewComment += "- 각 서비스는 독립적으로 빌드/배포됩니다\n";
-            
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: reviewComment
-            });
+
+              const botComment = comments.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('🤖 Smart FAST 자동 코드 리뷰')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: reviewComment
+                });
+                console.log('Updated existing review comment');
+              } else {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: reviewComment
+                });
+                console.log('Created new review comment');
+              }
+
+            } catch (error) {
+              console.error('Error creating review comment:', error);
+              process.exit(0);
+            }
