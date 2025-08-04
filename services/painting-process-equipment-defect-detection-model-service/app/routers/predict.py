@@ -130,6 +130,9 @@ async def predict_issue_from_file(
             return {"message": "감지된 이슈가 없거나 모든 행 처리 중 오류가 발생했습니다."}
 
         return {"filename": file.filename, "predictions": results}
+    except HTTPException as e:
+        # FastAPI에서 발생한 HTTP 예외는 그대로 다시 발생시킵니다.
+        raise e
     except Exception as e:
         print(f"파일 처리 실패: {e}")
         raise HTTPException(
