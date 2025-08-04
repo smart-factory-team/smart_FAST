@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import datetime
+from datetime import datetime, timezone
 from ..dependencies import get_model, get_config, get_initialization_status
 
 router = APIRouter()
@@ -10,7 +10,7 @@ async def health_check():
     서비스의 기본적인 헬스 상태를 확인합니다.
     주로 로드 밸런서의 Liveness Probe로 사용됩니다.
     """
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @router.get("/ready")
 async def ready_check(
@@ -22,7 +22,7 @@ async def ready_check(
     AI 모델과 설정 파일이 정상적으로 로드되었는지 확인합니다.
     주로 로드 밸런서의 Readiness Probe로 사용됩니다.
     """
-    return {"status": "ready", "models_loaded": True, "config_loaded": True, "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ready", "models_loaded": True, "config_loaded": True, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @router.get("/startup")
 async def startup_check(
@@ -35,4 +35,4 @@ async def startup_check(
     """
     if not initialization_complete:
         raise HTTPException(status_code=503, detail="Service initialization not yet complete.")
-    return {"status": "started", "initialization_complete": True, "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "started", "initialization_complete": True, "timestamp": datetime.now(timezone.utc).isoformat()}
