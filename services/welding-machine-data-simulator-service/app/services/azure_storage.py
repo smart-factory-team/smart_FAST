@@ -1,5 +1,4 @@
 import pandas as pd
-import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from azure.storage.blob.aio import BlobServiceClient
@@ -33,8 +32,8 @@ class AzureStorageService:
         if self.client:
             await self.client.close()
 
-    async def list_data_files(self, process_type: str = None) -> List[str]:
-        """Welding Machine 데이터 파일 목록 조회"""
+    async def list_data_files(self) -> List[str]:
+        """데이터 파일 목록 조회"""
         try:
             container_client = self.client.get_container_client(
                 self.container_name)
@@ -74,7 +73,7 @@ class AzureStorageService:
             print(f"❌ 파일 읽기 실패 ({blob_name}): {e}")
             return None
 
-    async def get_recent_data_files(self, hours_back: int = 24) -> Dict[str, List[str]]:
+    async def get_recent_data_files(self) -> Dict[str, List[str]]:
         """최근 N시간 내 Welding Machine 데이터 파일들 반환"""
         try:
             all_files = await self.list_data_files()
@@ -90,7 +89,7 @@ class AzureStorageService:
             print(f"❌ 최근 Welding 파일 조회 실패: {e}")
             return {"welding-machine": []}
 
-    async def simulate_real_time_data(self, process_type: str = "welding-machine") -> Optional[Dict[str, Dict[str, Any]]]:
+    async def simulate_real_time_data(self) -> Optional[Dict[str, Dict[str, Any]]]:
         """Welding Machine 실시간 데이터 시뮬레이션 (전류 + 진동) - 순차 처리"""
         try:
             # 캐시된 DataFrame이 없으면 로드
