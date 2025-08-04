@@ -35,8 +35,22 @@ logs:
     temperature_issue: "PAINT-EQ-TEM"
   # 로그 파일 저장 경로 수정 (선택 사항, 현재 경로 유지)
   file_path: "logs/issue_logs.jsonl" # 이 경로는 서비스 루트 기준
+  # 입력 컬럼명과 이슈 코드 사이의 매핑을 명시적으로 정의
+  issue_map:
+    PT_jo_V_1: "PAINT-EQ-VOL"
+    PT_jo_A_Main_1: "PAINT-EQ-CUR"
+    PT_jo_TP: "PAINT-EQ-TEM"
 
 validation:
   voltage_range: [20, 350]
   current_range: [5, 400]
   temperature_range: [25, 40]
+
+file_upload:
+  column_mapping:
+    machineId: "machineId"
+    timeStamp: "timeStamp"
+    Thick: "thick"
+    PT_jo_V_1: "voltage"
+    PT_jo_A_Main_1: "current"
+    PT_jo_TP: "temper"
