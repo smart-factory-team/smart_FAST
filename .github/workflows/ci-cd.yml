@@ -129,6 +129,11 @@ jobs:
             echo "⚠️ Service directory services/${{ matrix.service }} does not exist"
           fi
 
+      - name: Set environment variable for ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        run: |
+          echo "AZURE_CONNECTION_STRING=${{ secrets.AZURE_CONNECTION_STRING }}" >> $GITHUB_ENV
+
       - name: Install dependencies for ${{ matrix.service }}
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
