@@ -62,16 +62,24 @@ def _predict_and_analyze(
         raise HTTPException(status_code=500, detail=f"Configuration error: Missing key {e}") from e
 
     # Pandas DataFrame으로 변환
-    df_input = pd.DataFrame([input_data.model_dump()], columns=input_columns)
+    # 모델이 학습한 컬럼명 순서에 맞게 입력 데이터를 재구성합니다.
+    df_input_data = {
+        input_columns[0]: input_data.voltage,
+        input_columns[1]: input_data.current,
+        input_columns[2]: input_data.temper,
+    }
+    df_input = pd.DataFrame([df_input_data], columns=input_columns)
 
     # 모델 예측
     y_pred = model.predict(df_input)[0]
 
-    # 예측 오차 계산
-    prediction_error = abs(input_data.thick - y_pred)
+    # 예측 오차 계산 (예측값 기준 10% 오차율)
+    # 분모가 0이 되는 경우를 방지하기 위해 작은 값(epsilon)을 더해줌
+    epsilon = 1e-9
+    prediction_error_ratio = abs(input_data.thick - y_pred) / (y_pred + epsilon)
 
     # 예측 오차가 임계값 이내면 문제 없음으로 판단
-    if prediction_error < thickness_error_threshold:
+    if prediction_error_ratio < thickness_error_threshold:
         return None
 
     # SHAP 분석
@@ -98,13 +106,8 @@ def _predict_and_analyze(
         base_issue_code = issue_map.get(main_cause, log_issue_codes["machine_issue"])
         issue = f"{base_issue_code}-{'HIGH' if main_value > 0 else 'LOW'}"
     
-    # SHAP 상세 값 (옵션)
-    shap_detail = {f: round(shap_row[feature_names.index(f)], 5) for f in feature_names}
-
     return {
-        "predictionError": prediction_error,
-        "issue": issue,
-        "shapDetail": shap_detail
+        "issue": issue
     }
 
 # MAIN ANALYSIS FUNCTION
@@ -139,7 +142,7 @@ def analyze_issue_log_api(
 
     # 최종 로그 데이터 포맷팅
     log_data = input_data.model_dump()
-    log_data["issue"] = f"{analysis_result['issue']}"
+    log_data["issue"] = analysis_result['issue']
     log_data["isSolved"] = False # 기본값 False
     log_data["timeStamp"] = log_data["timeStamp"].isoformat() # 직렬화 문제 해결
 
