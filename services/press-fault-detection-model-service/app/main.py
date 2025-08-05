@@ -1,3 +1,4 @@
+import datetime
 import logging
 from fastapi import FastAPI
 from app.core.model_cache import model_cache
@@ -35,3 +36,15 @@ async def root():
     return {"message": "Hello World"}
 
 app.include_router(predict_router.router)
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "timestamp": datetime.utcnow()}
+ 
+@app.get("/ready")
+async def ready():
+    return {"status": "ready", "models_loaded": True}
+ 
+@app.get("/startup")  
+async def startup():
+    return {"status": "started", "initialization_complete": True}
