@@ -1,5 +1,4 @@
 import pandas as pd
-from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from azure.storage.blob.aio import BlobServiceClient
 from app.config.settings import settings
@@ -142,7 +141,7 @@ class AzureStorageService:
             files = await self.list_data_files()
 
             if not files:
-                print(f"⚠️ Welding Machine 데이터 파일이 없습니다.")
+                print("⚠️ Welding Machine 데이터 파일이 없습니다.")
                 return
 
             # 전류 및 진동 파일 찾기
@@ -156,7 +155,7 @@ class AzureStorageService:
                     vibration_file = file_path
 
             if not current_file or not vibration_file:
-                print(f"⚠️ 전류 또는 진동 데이터 파일을 찾을 수 없습니다.")
+                print("⚠️ 전류 또는 진동 데이터 파일을 찾을 수 없습니다.")
                 return
 
             # DataFrame 로드 및 캐싱
