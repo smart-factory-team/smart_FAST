@@ -71,9 +71,10 @@ class TestSaveIssueLog:
         # `utils.py`의 실제 출력과 일치하도록 수정
         mock_print.assert_called_with(f"로그 파일 디렉토리 생성 중 오류 발생: {os.path.dirname(config['logs']['file_path'])}")
 
+    @patch('os.path.exists', return_value=True)
     @patch('builtins.open', new_callable=mock_open)
     @patch('builtins.print')
-    def test_save_issue_log_file_write_error(self, mock_print, mock_file):
+    def test_save_issue_log_file_write_error(self, mock_print, mock_file, mock_exists):
         """로그 파일에 쓰는 도중 오류가 발생했을 때 경고를 출력하는지 테스트"""
         log_data = {"machineId": "MACHINE_001"}
         config = {"logs": {"file_path": "/test/path/log.jsonl"}}
