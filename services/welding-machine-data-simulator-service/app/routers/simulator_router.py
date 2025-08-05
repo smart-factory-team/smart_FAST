@@ -4,6 +4,7 @@ from app.services.scheduler_service import simulator_scheduler
 from app.config.settings import settings
 
 import os
+import json
 
 router = APIRouter()
 
@@ -63,7 +64,6 @@ async def get_recent_logs():
             lines = f.readlines()
             for line in lines[-10:]:  # 최근 10개
                 try:
-                    import json
                     logs.append(json.loads(line.strip()))
                 except:
                     continue
