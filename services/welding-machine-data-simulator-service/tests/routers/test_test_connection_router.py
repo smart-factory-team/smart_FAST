@@ -4,7 +4,6 @@ from fastapi import FastAPI
 
 from app.routers.test_connection_router import router
 
-
 # Create a test client for the router
 app = FastAPI()
 app.include_router(router)
@@ -13,14 +12,14 @@ client = TestClient(app)
 
 class TestAzureStorageConnection:
     """Test cases for Azure Storage connection endpoint"""
-    
+
     @patch('app.routers.test_connection_router.azure_storage')
     def test_azure_connection_success(self, mock_azure_storage):
         """Test successful Azure Storage connection"""
         # Arrange
         mock_files = [
             "data_file_1.csv",
-            "data_file_2.csv", 
+            "data_file_2.csv",
             "data_file_3.csv",
             "data_file_4.csv",
             "data_file_5.csv",
@@ -29,10 +28,10 @@ class TestAzureStorageConnection:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -49,10 +48,10 @@ class TestAzureStorageConnection:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=[])
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -68,10 +67,10 @@ class TestAzureStorageConnection:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -83,11 +82,12 @@ class TestAzureStorageConnection:
     def test_azure_connection_connect_failure(self, mock_azure_storage):
         """Test Azure Storage connection failure during connect"""
         # Arrange
-        mock_azure_storage.connect = AsyncMock(side_effect=Exception("Connection timeout"))
-        
+        mock_azure_storage.connect = AsyncMock(
+            side_effect=Exception("Connection timeout"))
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -100,11 +100,12 @@ class TestAzureStorageConnection:
         """Test Azure Storage connection failure during file listing"""
         # Arrange
         mock_azure_storage.connect = AsyncMock()
-        mock_azure_storage.list_data_files = AsyncMock(side_effect=Exception("Access denied"))
-        
+        mock_azure_storage.list_data_files = AsyncMock(
+            side_effect=Exception("Access denied"))
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -118,11 +119,12 @@ class TestAzureStorageConnection:
         mock_files = ["test.csv"]
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
-        mock_azure_storage.disconnect = AsyncMock(side_effect=Exception("Disconnect error"))
-        
+        mock_azure_storage.disconnect = AsyncMock(
+            side_effect=Exception("Disconnect error"))
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -137,10 +139,10 @@ class TestAzureStorageConnection:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -156,10 +158,10 @@ class TestAzureStorageConnection:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         # Act
         response = client.post("/azure-storage-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -176,12 +178,12 @@ class TestAzureStorageConnection:
             PermissionError("Access denied"),
             RuntimeError("Runtime error occurred")
         ]
-        
+
         for exception in exception_types:
             mock_azure_storage.connect = AsyncMock(side_effect=exception)
-            
+
             response = client.post("/azure-storage-connection")
-            
+
             assert response.status_code == 200
             response_data = response.json()
             assert response_data["status"] == "error"
@@ -190,27 +192,29 @@ class TestAzureStorageConnection:
 
 class TestModelServicesConnection:
     """Test cases for model services connection endpoint"""
-    
+
     @patch('app.routers.test_connection_router.model_client')
     @patch('app.routers.test_connection_router.settings')
     def test_model_services_all_healthy(self, mock_settings, mock_model_client):
         """Test model services connection with all services healthy"""
         # Arrange
-        mock_settings.model_services = {"service1": {}, "service2": {}, "service3": {}}
+        mock_settings.model_services = {
+            "service1": {}, "service2": {}, "service3": {}}
         mock_model_client.health_check_all = AsyncMock(return_value={
             "service1": True,
             "service2": True,
             "service3": True
         })
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["status"] == "success"
-        assert set(response_data["healthy_services"]) == {"service1", "service2", "service3"}
+        assert set(response_data["healthy_services"]) == {
+            "service1", "service2", "service3"}
         assert response_data["unhealthy_services"] == []
         assert response_data["total_services"] == 3
         assert response_data["healthy_count"] == 3
@@ -232,16 +236,18 @@ class TestModelServicesConnection:
             "service3": True,
             "service4": False
         })
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["status"] == "success"
-        assert set(response_data["healthy_services"]) == {"service1", "service3"}
-        assert set(response_data["unhealthy_services"]) == {"service2", "service4"}
+        assert set(response_data["healthy_services"]) == {
+            "service1", "service3"}
+        assert set(response_data["unhealthy_services"]) == {
+            "service2", "service4"}
         assert response_data["total_services"] == 4
         assert response_data["healthy_count"] == 2
 
@@ -255,16 +261,17 @@ class TestModelServicesConnection:
             "service1": False,
             "service2": False
         })
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["status"] == "error"
         assert response_data["healthy_services"] == []
-        assert set(response_data["unhealthy_services"]) == {"service1", "service2"}
+        assert set(response_data["unhealthy_services"]) == {
+            "service1", "service2"}
         assert response_data["total_services"] == 2
         assert response_data["healthy_count"] == 0
 
@@ -275,10 +282,10 @@ class TestModelServicesConnection:
         # Arrange
         mock_settings.model_services = {}
         mock_model_client.health_check_all = AsyncMock(return_value={})
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -292,11 +299,12 @@ class TestModelServicesConnection:
     def test_model_services_health_check_exception(self, mock_model_client):
         """Test model services connection with health check exception"""
         # Arrange
-        mock_model_client.health_check_all = AsyncMock(side_effect=Exception("Network error"))
-        
+        mock_model_client.health_check_all = AsyncMock(
+            side_effect=Exception("Network error"))
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -311,10 +319,10 @@ class TestModelServicesConnection:
         # Arrange
         mock_settings.model_services = {"service1": {}, "service2": {}}
         mock_model_client.health_check_all = AsyncMock(return_value={})
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -329,16 +337,17 @@ class TestModelServicesConnection:
     def test_model_services_partial_health_status(self, mock_settings, mock_model_client):
         """Test model services connection with partial health status response"""
         # Arrange
-        mock_settings.model_services = {"service1": {}, "service2": {}, "service3": {}}
+        mock_settings.model_services = {
+            "service1": {}, "service2": {}, "service3": {}}
         mock_model_client.health_check_all = AsyncMock(return_value={
             "service1": True,
             "service2": False
             # service3 missing from health status
         })
-        
+
         # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
@@ -354,7 +363,7 @@ class TestModelServicesConnection:
         """Test model services with various boolean-like values"""
         # Arrange
         mock_settings.model_services = {
-            "service1": {}, "service2": {}, "service3": {}, 
+            "service1": {}, "service2": {}, "service3": {},
             "service4": {}, "service5": {}
         }
         mock_model_client.health_check_all = AsyncMock(return_value={
@@ -364,15 +373,17 @@ class TestModelServicesConnection:
             "service4": 1,  # Truthy
             "service5": None  # Falsy
         })
-        
-        # Act  
+
+        # Act
         response = client.post("/models-connection")
-        
+
         # Assert
         assert response.status_code == 200
         response_data = response.json()
-        assert set(response_data["healthy_services"]) == {"service1", "service4"}
-        assert set(response_data["unhealthy_services"]) == {"service2", "service3", "service5"}
+        assert set(response_data["healthy_services"]) == {
+            "service1", "service4"}
+        assert set(response_data["unhealthy_services"]) == {
+            "service2", "service3", "service5"}
 
     @patch('app.routers.test_connection_router.model_client')
     def test_model_services_various_exception_types(self, mock_model_client):
@@ -383,12 +394,13 @@ class TestModelServicesConnection:
             ValueError("Invalid service configuration"),
             RuntimeError("Service runtime error")
         ]
-        
+
         for exception in exception_types:
-            mock_model_client.health_check_all = AsyncMock(side_effect=exception)
-            
+            mock_model_client.health_check_all = AsyncMock(
+                side_effect=exception)
+
             response = client.post("/models-connection")
-            
+
             assert response.status_code == 200
             response_data = response.json()
             assert response_data["status"] == "error"
@@ -404,7 +416,7 @@ class TestHTTPMethodValidation:
             mock_azure.connect = AsyncMock()
             mock_azure.list_data_files = AsyncMock(return_value=[])
             mock_azure.disconnect = AsyncMock()
-            
+
             response = client.post("/azure-storage-connection")
             assert response.status_code == 200
 
@@ -421,10 +433,10 @@ class TestHTTPMethodValidation:
     def test_models_connection_post_allowed(self):
         """Test that POST method is allowed for models connection endpoint"""
         with patch('app.routers.test_connection_router.model_client') as mock_client, \
-             patch('app.routers.test_connection_router.settings') as mock_settings:
+                patch('app.routers.test_connection_router.settings') as mock_settings:
             mock_client.health_check_all = AsyncMock(return_value={})
             mock_settings.model_services = {}
-            
+
             response = client.post("/models-connection")
             assert response.status_code == 200
 
@@ -441,22 +453,23 @@ class TestHTTPMethodValidation:
 
 class TestResponseFormats:
     """Test response format validation"""
-    
+
     @patch('app.routers.test_connection_router.azure_storage')
     def test_azure_response_format_success(self, mock_azure_storage):
         """Test Azure Storage response format for success case"""
         mock_azure_storage.connect = AsyncMock()
-        mock_azure_storage.list_data_files = AsyncMock(return_value=["file1.csv", "file2.csv"])
+        mock_azure_storage.list_data_files = AsyncMock(
+            return_value=["file1.csv", "file2.csv"])
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         response = client.post("/azure-storage-connection")
         response_data = response.json()
-        
+
         # Verify all required fields are present
         required_fields = ["status", "message", "file_count", "sample_files"]
         for field in required_fields:
             assert field in response_data
-        
+
         # Verify data types
         assert isinstance(response_data["status"], str)
         assert isinstance(response_data["message"], str)
@@ -466,16 +479,17 @@ class TestResponseFormats:
     @patch('app.routers.test_connection_router.azure_storage')
     def test_azure_response_format_error(self, mock_azure_storage):
         """Test Azure Storage response format for error case"""
-        mock_azure_storage.connect = AsyncMock(side_effect=Exception("Test error"))
-        
+        mock_azure_storage.connect = AsyncMock(
+            side_effect=Exception("Test error"))
+
         response = client.post("/azure-storage-connection")
         response_data = response.json()
-        
+
         # Verify required fields for error case
         required_fields = ["status", "message"]
         for field in required_fields:
             assert field in response_data
-        
+
         assert response_data["status"] == "error"
         assert "Test error" in response_data["message"]
 
@@ -484,16 +498,18 @@ class TestResponseFormats:
     def test_model_services_response_format_success(self, mock_settings, mock_model_client):
         """Test model services response format for success case"""
         mock_settings.model_services = {"service1": {}}
-        mock_model_client.health_check_all = AsyncMock(return_value={"service1": True})
-        
+        mock_model_client.health_check_all = AsyncMock(
+            return_value={"service1": True})
+
         response = client.post("/models-connection")
         response_data = response.json()
-        
+
         # Verify all required fields are present
-        required_fields = ["status", "healthy_services", "unhealthy_services", "total_services", "healthy_count"]
+        required_fields = ["status", "healthy_services",
+                           "unhealthy_services", "total_services", "healthy_count"]
         for field in required_fields:
             assert field in response_data
-        
+
         # Verify data types
         assert isinstance(response_data["status"], str)
         assert isinstance(response_data["healthy_services"], list)
@@ -504,16 +520,17 @@ class TestResponseFormats:
     @patch('app.routers.test_connection_router.model_client')
     def test_model_services_response_format_error(self, mock_model_client):
         """Test model services response format for error case"""
-        mock_model_client.health_check_all = AsyncMock(side_effect=Exception("Test error"))
-        
+        mock_model_client.health_check_all = AsyncMock(
+            side_effect=Exception("Test error"))
+
         response = client.post("/models-connection")
         response_data = response.json()
-        
+
         # Verify required fields for error case
         required_fields = ["status", "message"]
         for field in required_fields:
             assert field in response_data
-        
+
         assert response_data["status"] == "error"
         assert "Test error" in response_data["message"]
 
@@ -523,10 +540,11 @@ class TestResponseFormats:
             mock_azure.connect = AsyncMock()
             mock_azure.list_data_files = AsyncMock(return_value=[])
             mock_azure.disconnect = AsyncMock()
-            
+
             response = client.post("/azure-storage-connection")
             assert response.status_code == 200
-            assert "application/json" in response.headers.get("content-type", "")
+            assert "application/json" in response.headers.get(
+                "content-type", "")
 
 
 class TestRouterIntegration:
@@ -550,20 +568,22 @@ class TestRouterIntegration:
         """Test that concurrent requests are handled independently"""
         # Setup mocks
         mock_azure_storage.connect = AsyncMock()
-        mock_azure_storage.list_data_files = AsyncMock(return_value=["test.csv"])
+        mock_azure_storage.list_data_files = AsyncMock(
+            return_value=["test.csv"])
         mock_azure_storage.disconnect = AsyncMock()
-        
-        mock_model_client.health_check_all = AsyncMock(return_value={"service1": True})
+
+        mock_model_client.health_check_all = AsyncMock(
+            return_value={"service1": True})
         mock_settings.model_services = {"service1": {}}
-        
+
         # Make multiple requests
         azure_responses = []
         model_responses = []
-        
+
         for _ in range(3):
             azure_responses.append(client.post("/azure-storage-connection"))
             model_responses.append(client.post("/models-connection"))
-        
+
         # All requests should succeed
         for response in azure_responses + model_responses:
             assert response.status_code == 200
@@ -580,9 +600,9 @@ class TestEdgeCasesAndBoundaryConditions:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         response = client.post("/azure-storage-connection")
-        
+
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["file_count"] == 5
@@ -596,9 +616,9 @@ class TestEdgeCasesAndBoundaryConditions:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         response = client.post("/azure-storage-connection")
-        
+
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["file_count"] == 1
@@ -609,10 +629,11 @@ class TestEdgeCasesAndBoundaryConditions:
     def test_model_services_single_service(self, mock_settings, mock_model_client):
         """Test model services with single service"""
         mock_settings.model_services = {"single_service": {}}
-        mock_model_client.health_check_all = AsyncMock(return_value={"single_service": True})
-        
+        mock_model_client.health_check_all = AsyncMock(
+            return_value={"single_service": True})
+
         response = client.post("/models-connection")
-        
+
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["status"] == "success"
@@ -634,9 +655,9 @@ class TestEdgeCasesAndBoundaryConditions:
         mock_azure_storage.connect = AsyncMock()
         mock_azure_storage.list_data_files = AsyncMock(return_value=mock_files)
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         response = client.post("/azure-storage-connection")
-        
+
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["status"] == "success"
@@ -650,13 +671,14 @@ class TestServiceIntegration:
     def test_azure_service_method_call_sequence(self, mock_azure_storage):
         """Test that Azure service methods are called in correct sequence"""
         mock_azure_storage.connect = AsyncMock()
-        mock_azure_storage.list_data_files = AsyncMock(return_value=["test.csv"])
+        mock_azure_storage.list_data_files = AsyncMock(
+            return_value=["test.csv"])
         mock_azure_storage.disconnect = AsyncMock()
-        
+
         response = client.post("/azure-storage-connection")
-        
+
         assert response.status_code == 200
-        
+
         # Verify methods were called in the expected order
         mock_azure_storage.connect.assert_called_once()
         mock_azure_storage.list_data_files.assert_called_once()
@@ -667,12 +689,13 @@ class TestServiceIntegration:
     def test_model_client_service_integration(self, mock_settings, mock_model_client):
         """Test model client service integration"""
         mock_settings.model_services = {"test_service": {"url": "http://test"}}
-        mock_model_client.health_check_all = AsyncMock(return_value={"test_service": True})
-        
+        mock_model_client.health_check_all = AsyncMock(
+            return_value={"test_service": True})
+
         response = client.post("/models-connection")
-        
+
         assert response.status_code == 200
         mock_model_client.health_check_all.assert_called_once()
-        
+
         # Verify settings are accessed
         assert hasattr(mock_settings, 'model_services')
