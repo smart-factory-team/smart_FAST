@@ -48,3 +48,7 @@ tzlocal==5.3.1
 urllib3==2.5.0
 uvicorn==0.35.0
 yarl==1.20.1
+
+# Test dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
