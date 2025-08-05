@@ -3,7 +3,8 @@ import httpx
 from unittest.mock import Mock, patch, AsyncMock, call
 import json
 
-from app.services.test_model_client import ModelClient, model_client
+from app.services.model_client import ModelClient, model_client
+
 
 class TestModelClient:
     """
@@ -19,7 +20,7 @@ class TestModelClient:
     @pytest.fixture
     def mock_settings(self):
         """Mock settings configuration."""
-        with patch('app.services.test_model_client.settings') as mock_settings:
+        with patch('app.services.model_client.settings') as mock_settings:
             mock_settings.http_timeout = 30.0
             mock_settings.max_retries = 3
             mock_settings.model_services = {
@@ -63,7 +64,8 @@ class TestModelClient:
             mock_response.status_code = 200
             mock_response.json.return_value = expected_response
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client.predict(service_name, data)
 
@@ -85,19 +87,21 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
+                patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
 
             mock_response = Mock()
             mock_response.status_code = 500
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client.predict(service_name, data)
 
             assert result is None
             assert mock_client.return_value.__aenter__.return_value.post.call_count == mock_settings.max_retries
             # Verify exponential backoff calls (should be called max_retries - 1 times)
-            expected_sleep_calls = [call(2**i) for i in range(mock_settings.max_retries - 1)]
+            expected_sleep_calls = [
+                call(2**i) for i in range(mock_settings.max_retries - 1)]
             mock_sleep.assert_has_calls(expected_sleep_calls)
 
     @pytest.mark.asyncio
@@ -107,7 +111,7 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
+                patch('asyncio.sleep', new_callable=AsyncMock):
 
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 side_effect=httpx.TimeoutException("Timeout")
@@ -125,7 +129,7 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
+                patch('asyncio.sleep', new_callable=AsyncMock):
 
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 side_effect=httpx.ConnectError("Connection failed")
@@ -143,7 +147,7 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
+                patch('asyncio.sleep', new_callable=AsyncMock):
 
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 side_effect=Exception("Generic error")
@@ -162,7 +166,7 @@ class TestModelClient:
         expected_response = {'status': 'normal', 'mae': 0.5}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
+                patch('asyncio.sleep', new_callable=AsyncMock):
 
             # First call fails, second succeeds
             mock_responses = [
@@ -170,7 +174,8 @@ class TestModelClient:
                 Mock(status_code=200, json=Mock(return_value=expected_response))
             ]
 
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=mock_responses)
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                side_effect=mock_responses)
 
             result = await client.predict(service_name, data)
 
@@ -185,10 +190,11 @@ class TestModelClient:
         vibration_result = {'status': 'normal', 'mae': 0.2, 'threshold': 0.6}
 
         with patch.object(client, '_single_predict', new_callable=AsyncMock) as mock_single_predict:
-            mock_single_predict.side_effect = [current_result, vibration_result]
+            mock_single_predict.side_effect = [
+                current_result, vibration_result]
 
             result = await client.predict_welding_data(
-                sample_data['current_data'], 
+                sample_data['current_data'],
                 sample_data['vibration_data']
             )
 
@@ -196,20 +202,22 @@ class TestModelClient:
             assert result['vibration'] == vibration_result
             assert result['combined']['status'] == 'normal'
             assert mock_single_predict.call_count == 2
-            
+
             # Verify correct URLs were called
             expected_url = 'http://localhost:8001/api/predict'
-            mock_single_predict.assert_any_call(expected_url, sample_data['current_data'], '전류')
-            mock_single_predict.assert_any_call(expected_url, sample_data['vibration_data'], '진동')
+            mock_single_predict.assert_any_call(
+                expected_url, sample_data['current_data'], '전류')
+            mock_single_predict.assert_any_call(
+                expected_url, sample_data['vibration_data'], '진동')
 
     @pytest.mark.asyncio
     async def test_predict_welding_data_unknown_service(self, client, sample_data):
         """Test welding data prediction with unknown service."""
-        with patch('app.services.test_model_client.settings') as mock_settings:
+        with patch('app.services.model_client.settings') as mock_settings:
             mock_settings.model_services = {}
 
             result = await client.predict_welding_data(
-                sample_data['current_data'], 
+                sample_data['current_data'],
                 sample_data['vibration_data']
             )
 
@@ -222,10 +230,11 @@ class TestModelClient:
         vibration_result = None
 
         with patch.object(client, '_single_predict', new_callable=AsyncMock) as mock_single_predict:
-            mock_single_predict.side_effect = [current_result, vibration_result]
+            mock_single_predict.side_effect = [
+                current_result, vibration_result]
 
             result = await client.predict_welding_data(
-                sample_data['current_data'], 
+                sample_data['current_data'],
                 sample_data['vibration_data']
             )
 
@@ -246,8 +255,9 @@ class TestModelClient:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = expected_response
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client._single_predict(predict_url, data, data_type)
 
@@ -261,12 +271,13 @@ class TestModelClient:
         data_type = '전류'
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
+                patch('asyncio.sleep', new_callable=AsyncMock):
 
             mock_response = Mock()
             mock_response.status_code = 500
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client._single_predict(predict_url, data, data_type)
 
@@ -394,8 +405,9 @@ class TestModelClient:
         with patch('httpx.AsyncClient') as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
-            
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response)
 
             result = await client.health_check(service_name)
 
@@ -412,8 +424,9 @@ class TestModelClient:
         with patch('httpx.AsyncClient') as mock_client:
             mock_response = Mock()
             mock_response.status_code = 500
-            
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response)
 
             result = await client.health_check(service_name)
 
@@ -445,11 +458,12 @@ class TestModelClient:
         service_name = 'test-service'
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('httpx.Timeout') as mock_timeout:
-            
+                patch('httpx.Timeout') as mock_timeout:
+
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response)
 
             await client.health_check(service_name)
 
@@ -497,7 +511,7 @@ class TestModelClient:
     @pytest.mark.asyncio
     async def test_health_check_all_empty_services(self, client):
         """Test health check when no services are configured."""
-        with patch('app.services.test_model_client.settings') as mock_settings:
+        with patch('app.services.model_client.settings') as mock_settings:
             mock_settings.model_services = {}
 
             result = await client.health_check_all()
@@ -508,8 +522,8 @@ class TestModelClient:
     async def test_health_check_all_concurrent_execution(self, client, mock_settings):
         """Test that health_check_all executes checks concurrently."""
         with patch.object(client, 'health_check', new_callable=AsyncMock) as mock_health_check, \
-             patch('asyncio.gather', new_callable=AsyncMock) as mock_gather:
-            
+                patch('asyncio.gather', new_callable=AsyncMock) as mock_gather:
+
             mock_health_check.return_value = True
             mock_gather.return_value = [True, True]
 
@@ -531,18 +545,20 @@ class TestModelClient:
                 Mock(status_code=200, json=Mock(return_value=current_result)),
                 Mock(status_code=200, json=Mock(return_value=vibration_result))
             ]
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=mock_responses)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                side_effect=mock_responses)
 
             result = await client.predict_welding_data(
-                sample_data['current_data'], 
+                sample_data['current_data'],
                 sample_data['vibration_data']
             )
 
             # Verify full workflow
             assert result['current'] == current_result
             assert result['vibration'] == vibration_result
-            assert result['combined']['status'] == 'anomaly'  # Any anomaly makes final anomaly
+            # Any anomaly makes final anomaly
+            assert result['combined']['status'] == 'anomaly'
             assert '전류: normal, 진동: anomaly → 최종: anomaly' in result['combined']['combined_logic']
 
     # Edge cases and boundary tests
@@ -557,8 +573,9 @@ class TestModelClient:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = expected_response
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client.predict(service_name, data)
 
@@ -575,8 +592,9 @@ class TestModelClient:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = expected_response
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client.predict(service_name, data)
 
@@ -587,17 +605,18 @@ class TestModelClient:
         """Test prediction with various HTTP status codes."""
         service_name = 'test-service'
         data = {'input': 'test'}
-        
+
         status_codes_to_test = [201, 400, 401, 403, 404, 500, 502, 503]
-        
+
         for status_code in status_codes_to_test:
             with patch('httpx.AsyncClient') as mock_client, \
-                 patch('asyncio.sleep', new_callable=AsyncMock):
-                
+                    patch('asyncio.sleep', new_callable=AsyncMock):
+
                 mock_response = Mock()
                 mock_response.status_code = status_code
-                
-                mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+                mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                    return_value=mock_response)
 
                 result = await client.predict(service_name, data)
 
@@ -611,13 +630,15 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock):
-            
+                patch('asyncio.sleep', new_callable=AsyncMock):
+
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+            mock_response.json.side_effect = json.JSONDecodeError(
+                "Invalid JSON", "", 0)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             result = await client.predict(service_name, data)
 
@@ -631,8 +652,8 @@ class TestModelClient:
         data = {'input': 'test'}
 
         with patch('httpx.AsyncClient') as mock_client, \
-             patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            
+                patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
+
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 side_effect=httpx.TimeoutException("Timeout")
             )
@@ -660,8 +681,9 @@ class TestModelClient:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {'status': 'success'}
-            
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             await client.predict(service_name, data)
 
@@ -671,14 +693,14 @@ class TestModelClient:
     def test_combine_results_with_extra_fields(self, client):
         """Test combining results with extra fields."""
         current_result = {
-            'status': 'normal', 
-            'mae': 0.1, 
-            'threshold': 0.5, 
+            'status': 'normal',
+            'mae': 0.1,
+            'threshold': 0.5,
             'extra_field': 'value'
         }
         vibration_result = {
-            'status': 'normal', 
-            'mae': 0.2, 
+            'status': 'normal',
+            'mae': 0.2,
             'threshold': 0.6,
             'another_field': 'another_value'
         }
@@ -693,21 +715,22 @@ class TestModelClient:
     @pytest.mark.asyncio
     async def test_service_url_formatting(self, client):
         """Test that service URLs are properly formatted."""
-        with patch('app.services.test_model_client.settings') as mock_settings:
+        with patch('app.services.model_client.settings') as mock_settings:
             mock_settings.model_services = {
                 'service1': 'http://localhost:8001',      # No trailing slash
                 'service2': 'http://localhost:8002/',     # With trailing slash
-                'service3': 'https://example.com:443/api' # Complex URL
+                'service3': 'https://example.com:443/api'  # Complex URL
             }
-            
+
             # Test service1
             with patch('httpx.AsyncClient') as mock_client:
                 mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                    return_value=Mock(status_code=200, json=Mock(return_value={}))
+                    return_value=Mock(
+                        status_code=200, json=Mock(return_value={}))
                 )
-                
+
                 await client.predict('service1', {})
-                
+
                 # Should append /api/predict correctly
                 mock_client.return_value.__aenter__.return_value.post.assert_called_with(
                     'http://localhost:8001/api/predict', json={}
@@ -722,12 +745,13 @@ class TestModelClient:
         with patch('httpx.AsyncClient') as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
-            
+
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {'status': 'success'}
-            
-            mock_client.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+
+            mock_client.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response)
 
             await client.predict(service_name, data)
 
