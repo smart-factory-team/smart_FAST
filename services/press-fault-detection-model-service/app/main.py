@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.core.model_cache import model_cache
 from contextlib import asynccontextmanager
 from app.models.model_loader import load_model, load_scaler, load_threshold
+from app.routers import predict_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,3 +34,4 @@ app = FastAPI(
 async def root():
     return {"message": "Hello World"}
 
+app.include_router(predict_router.router)
