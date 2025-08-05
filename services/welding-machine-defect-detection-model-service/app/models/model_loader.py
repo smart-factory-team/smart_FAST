@@ -1,5 +1,4 @@
 import json
-import numpy as np
 import joblib
 from keras.models import load_model
 from huggingface_hub import hf_hub_download
