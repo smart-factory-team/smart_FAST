@@ -86,16 +86,16 @@ painting-process-equipment-simulator-service/
     ```
 
 3.  **시뮬레이터 서비스 Docker 이미지 빌드**:
-    `.env` 파일이 현재 디렉토리에 있는지 확인한 후, 아래 명령어를 실행합니다. (`Dockerfile`이 `.env` 파일을 이미지 안으로 복사합니다.)
     ```bash
     docker build -t simulator-service .
     ```
 
 4.  **시뮬레이터 서비스 Docker 컨테이너 실행**:
-    `-p` 옵션으로 포트를 매핑하고, `-e` 옵션으로 모델 서비스의 주소를 컨테이너 이름으로 알려줍니다.
+    `--env-file` 옵션을 사용하여 호스트의 `.env` 파일을 컨테이너의 환경 변수로 안전하게 주입합니다.
     ```bash
     docker run --name simulator-service --network smart-fast-net \
       -p 8008:8008 \
+      --env-file ./.env \
       -e PAINTING_SERVICE_URL="http://model-service:8001" \
       simulator-service
     ```

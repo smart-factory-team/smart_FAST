@@ -12,8 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 환경 변수 파일 복사
-COPY .env .env
+
 
 # 애플리케이션 코드 복사
 COPY app/ ./app/
