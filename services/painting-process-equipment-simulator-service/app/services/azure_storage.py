@@ -72,8 +72,13 @@ class AzureStorageService:
             data_row = self.cached_df.iloc[self.current_index]
             self.current_index = (self.current_index + 1) % len(self.cached_df)
 
-            # API 호출용 데이터 형태로 변환
+            # 필요한 모든 열이 존재하는지 확인
+            required_columns = ['machineId', 'timeStamp', 'Thick', 'PT_jo_V_1', 'PT_jo_A_Main_1', 'PT_jo_TP']
+            missing_columns = [col for col in required_columns if col not in data_row.index]
+            if missing_columns:
+                raise ValueError(f"Missing required columns: {missing_columns}")
 
+            # API 호출용 데이터 형태로 변환
             simulated_data = {
                 "machineId": f"PAINT-{data_row.get('machineId')}",
                 "timeStamp": data_row.get("timeStamp"),
