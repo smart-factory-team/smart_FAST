@@ -4,7 +4,6 @@ import joblib
 from keras.models import load_model as keras_load_model
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 ORG = "23smartfactory"
@@ -59,9 +58,12 @@ def load_all():
     
     if model is None or scaler is None or threshold is None:
         missing_items = []
-        if model is None: missing_items.append("model")
-        if scaler is None: missing_items.append("scaler")
-        if threshold is None: missing_items.append("threshold")
+        if model is None:
+            missing_items.append("model")
+        if scaler is None:
+            missing_items.append("scaler")
+        if threshold is None:
+            missing_items.append("threshold")
         
         raise RuntimeError(f"다음 artifacts 로딩 실패: {', '.join(missing_items)}")
     
