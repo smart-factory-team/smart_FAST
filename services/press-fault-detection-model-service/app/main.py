@@ -40,12 +40,12 @@ app.include_router(predict_router.router)
 
 @app.get("/health")
 async def health():
-    
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
  
 @app.get("/ready")
 async def ready():
-    return {"status": "ready", "models_loaded": True}
+    models_loaded = all(key in model_cache for key in ["model", "scaler", "threshold"])
+    return {"status": "ready" if models_loaded else "not ready", "models_loaded": models_loaded}
  
 @app.get("/startup")  
 async def startup():
