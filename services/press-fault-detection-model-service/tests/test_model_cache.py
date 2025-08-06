@@ -35,7 +35,11 @@ class TestModelCache(unittest.TestCase):
         """Clean up after each test method."""
         # Restore original state
         model_cache.clear()
-        model_cache.update(self.original_cache)
+        model_cache.update({
+            "model": None,
+            "scaler": None,
+            "threshold": None
+        })
 
     def test_initial_cache_state(self):
         """Test that model_cache initializes with expected default values."""
