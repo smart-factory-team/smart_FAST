@@ -1,5 +1,5 @@
 # services/model-service-1/Dockerfile (다른 서비스도 동일)
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
