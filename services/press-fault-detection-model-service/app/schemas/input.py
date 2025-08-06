@@ -19,9 +19,9 @@ class SensorData(BaseModel):
     
     @field_validator('AI0_Vibration', 'AI1_Vibration', 'AI2_Current')
     @classmethod
-    def check_min_length(cls, v, field):
+    def check_min_length(cls, v, info):
         if len(v) < SEQUENCE_LENGTH:
-            raise ValueError(f'{field.name} 필드는 최소 {SEQUENCE_LENGTH}개의 데이터 포인트를 가져야 합니다.')
+            raise ValueError(f'{info.field_name} 필드는 최소 {SEQUENCE_LENGTH}개의 데이터 포인트를 가져야 합니다.')
         return v
 
     @model_validator(mode='after')
