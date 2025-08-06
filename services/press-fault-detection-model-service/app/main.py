@@ -39,7 +39,11 @@ app.include_router(predict_router.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
+# at the top of services/press-fault-detection-model-service/app/main.py
+from datetime import timezone
+
+    # … inside your health check function …
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
  
 @app.get("/ready")
 async def ready():
