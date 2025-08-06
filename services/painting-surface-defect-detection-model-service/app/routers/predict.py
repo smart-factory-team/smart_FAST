@@ -86,6 +86,9 @@ async def predict(
         logger.info(f"Prediction completed successfully for {image.filename}")
         return result
         
+    except HTTPException:
+        # HTTPException은 그대로 재발생
+        raise
     except Exception as e:
         logger.error(f"Error in prediction: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
@@ -128,7 +131,10 @@ def predict_anomaly(image_data: bytes, confidence_threshold: Optional[float] = N
     import numpy as np
     
     # 바이트 데이터를 PIL Image로 변환
-    image = Image.open(io.BytesIO(image_data))
+    try:
+        image = Image.open(io.BytesIO(image_data))
+    except Exception as e:
+        raise ValueError(f"유효하지 않은 이미지 데이터입니다: {str(e)}")
     
     # RGB로 변환 (RGBA인 경우)
     if image.mode != 'RGB':
@@ -192,6 +198,9 @@ async def get_model_info():
         info = await detection_service.get_model_info()
         return info
         
+    except HTTPException:
+        # HTTPException은 그대로 재발생
+        raise
     except Exception as e:
         logger.error(f"Error getting model info: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get model info: {str(e)}")

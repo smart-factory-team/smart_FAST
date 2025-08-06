@@ -12,11 +12,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     from app.main import app
-    from app.routers.predict import predict, predict_base64, PredictionRequest, PredictionResponse
+    from app.routers.predict import predict, predict_base64, predict_anomaly, PredictionRequest, PredictionResponse
 except ImportError:
     # 대체 import 경로 시도
     from main import app
-    from routers.predict import predict, predict_base64, PredictionRequest, PredictionResponse
+    from routers.predict import predict, predict_base64, predict_anomaly, PredictionRequest, PredictionResponse
 
 
 class TestPredictRouter:
