@@ -2,14 +2,10 @@ from fastapi import APIRouter
 from app.services.model_client import model_client
 from app.services.azure_storage import azure_storage
 from app.config.settings import settings
-import pytest
 
 router = APIRouter()
 
-pytestmark = pytest.mark.asyncio
-
-
-@router.post("/azure-storage-connection")
+@router.get("/azure-storage-connection")
 async def test_azure_connection():
     """Azure Storage 연결 테스트"""
     try:
@@ -28,7 +24,7 @@ async def test_azure_connection():
         }
 
 
-@router.post("/models-connection")
+@router.get("/models-connection")
 async def test_model_services():
     """모델 서비스 연결 테스트"""
     try:
