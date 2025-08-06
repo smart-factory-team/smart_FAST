@@ -22,10 +22,10 @@ COPY app/ ./app/
 RUN mkdir -p logs
 
 # 포트 노출
-EXPOSE 8009
+EXPOSE 8008
 
 # 환경 변수 설정
 ENV PYTHONPATH=/app
 
 # 애플리케이션 실행
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8009"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8008"]
