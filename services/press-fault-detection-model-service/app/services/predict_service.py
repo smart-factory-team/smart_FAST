@@ -38,7 +38,7 @@ def predict(data: SensorData) -> dict:
         # 4. 시퀀스 데이터 생성
         sequences = create_sequences(scaler_data, SEQUENCE_LENGTH)
         if len(sequences)==0:
-            raise ValueError(f"입력 데이터 길이({len(scaler_data)}가 시퀀스 길이 ({SEQUENCE_LENGTH})보다 짧아 예측을 수행할 수 없습니다.)")
+            raise ValueError(f"입력 데이터 길이({len(scaler_data)})가 시퀀스 길이 ({SEQUENCE_LENGTH})보다 짧아 예측을 수행할 수 없습니다.")
         
         # 5. 예측, 복원 오차 계산
         reconstructed_sequence = model.predict(sequences)
