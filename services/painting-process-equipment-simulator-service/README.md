@@ -58,7 +58,7 @@ painting-process-equipment-simulator-service/
 
 3.  **.env 파일 설정**:
     프로젝트 루트에 `.env` 파일을 생성하고, Azure Storage 연결 문자열을 추가합니다.
-    ```
+    ```env
     AZURE_CONNECTION_STRING="<Your_Azure_Storage_Connection_String>"
     ```
 
@@ -117,4 +117,5 @@ painting-process-equipment-simulator-service/
 | `GET`       | `/simulator/status`               | 현재 스케줄러의 상태를 확인합니다.         |
 | `POST`      | `/test/azure-storage-connection`  | Azure Blob Storage 연결을 테스트합니다.    |
 | `POST`      | `/test/models-connection`         | 모델 서비스와의 연결을 테스트합니다.       |
+```text
 ```

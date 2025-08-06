@@ -31,7 +31,7 @@ async def start_simulator():
             "status": simulator_scheduler.get_status()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"시뮬레이터 시작 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"시뮬레이터 시작 실패: {str(e)}") from e
 
 
 @router.post("/stop")
@@ -44,7 +44,7 @@ async def stop_simulator():
             "status": simulator_scheduler.get_status()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"시뮬레이터 중지 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"시뮬레이터 중지 실패: {str(e)}") from e
 
 
 @router.get("/logs/recent")

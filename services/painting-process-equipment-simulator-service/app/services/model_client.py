@@ -50,7 +50,7 @@ class ModelClient:
                     print(f"❌ {service_name} 예측 오류 (시도 {attempt + 1}): {e}")
 
                 if attempt < self.max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(min(2 ** attempt, 30))
 
             print(f"❌ {service_name} 최대 재시도 횟수 초과")
             return None

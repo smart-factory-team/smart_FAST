@@ -1,10 +1,8 @@
 import pandas as pd
-from datetime import datetime
 from typing import List, Dict, Any, Optional
 from azure.storage.blob.aio import BlobServiceClient
 from app.config.settings import settings
 import io
-import random
 
 
 class AzureStorageService:
@@ -99,7 +97,7 @@ class AzureStorageService:
         try:
             files = await self.list_data_files()
             if not files:
-                print(f"⚠️ Painting 데이터 파일이 없습니다.")
+                print("⚠️ Painting 데이터 파일이 없습니다.")
                 return
 
             # 첫 번째 CSV 파일을 사용
