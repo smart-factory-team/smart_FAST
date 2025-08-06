@@ -4,6 +4,7 @@ from app.services.scheduler_service import simulator_scheduler
 from app.config.settings import settings
 
 import os
+import json
 
 router = APIRouter()
 
@@ -59,19 +60,20 @@ async def get_recent_logs():
 
         # 최근 10개 로그만 반환
         logs = []
+        total_lines = 0
         with open(log_file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
+            total_lines = len(lines)
             for line in lines[-10:]:  # 최근 10개
                 try:
-                    import json
                     logs.append(json.loads(line.strip()))
-                except:
+                except json.JSONDecodeError:
                     continue
 
         return {
             "logs": logs,
-            "total_count": len(lines) if 'lines' in locals() else 0
+            "total_count": total_lines
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"로그 조회 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"로그 조회 실패: {str(e)}") from e
