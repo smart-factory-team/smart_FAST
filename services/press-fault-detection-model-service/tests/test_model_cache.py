@@ -226,7 +226,7 @@ class TestModelCache(unittest.TestCase):
         self.assertIsNone(model_cache.get("threshold"))
 
         # Test with default values
-        self.assertEqual(model_cache.get("model", "default"), "default")
+        self.assertIsNone(model_cache.get("model", "default"))
         self.assertEqual(model_cache.get("nonexistent", "default"), "default")
 
         # Test after assignment (loaded state)

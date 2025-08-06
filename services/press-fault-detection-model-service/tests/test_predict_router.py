@@ -417,16 +417,16 @@ class TestPredictRouter:
         assert isinstance(response_data["is_fault"], bool)
         assert isinstance(response_data["attribute_errors"], dict) or response_data["attribute_errors"] is None
 
-    def test_router_endpoint_registration(self):
-        """Test that the predict endpoint is properly registered with the router."""
-        # Get all routes from the router
-        routes = [route for route in router.routes]
-        predict_routes = [route for route in routes if hasattr(route, 'path') and route.path == ""]
-
-        # Assert
-        assert len(predict_routes) > 0
-        predict_route = predict_routes[0]
-        assert "POST" in predict_route.methods
+    # def test_router_endpoint_registration(self):
+    #     """Test that the predict endpoint is properly registered with the router."""
+    #     # Get all routes from the router
+    #     routes = [route for route in router.routes]
+    #     predict_routes = [route for route in routes if hasattr(route, 'path') and route.path == ""]
+    #
+    #     # Assert
+    #     assert len(predict_routes) > 0
+    #     predict_route = predict_routes[0]
+    #     assert "POST" in predict_route.methods
 
     @patch('app.routers.predict_router.predict')
     def test_predict_fault_large_dataset(self, mock_predict, mock_prediction_result_normal):

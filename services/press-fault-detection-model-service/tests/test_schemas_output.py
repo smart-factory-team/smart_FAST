@@ -100,7 +100,7 @@ class TestPredictionResponse:
             PredictionResponse(**data)
         
         assert "prediction" in str(exc_info.value)
-        assert "field required" in str(exc_info.value)
+        assert "Field required" in str(exc_info.value)
     
     def test_missing_required_field_reconstruction_error(self):
         """Test validation error when reconstruction_error field is missing."""
@@ -113,7 +113,7 @@ class TestPredictionResponse:
             PredictionResponse(**data)
         
         assert "reconstruction_error" in str(exc_info.value)
-        assert "field required" in str(exc_info.value)
+        assert "Field required" in str(exc_info.value)
     
     def test_missing_required_field_is_fault(self):
         """Test validation error when is_fault field is missing."""
@@ -126,7 +126,7 @@ class TestPredictionResponse:
             PredictionResponse(**data)
         
         assert "is_fault" in str(exc_info.value)
-        assert "field required" in str(exc_info.value)
+        assert "Field required" in str(exc_info.value)
     
     def test_invalid_prediction_type(self):
         """Test validation error when prediction is not a string."""
@@ -368,7 +368,7 @@ class TestPredictionResponse:
         }
         
         original = PredictionResponse(**data)
-        copied = original.copy()
+        copied = original.copy(deep=True)
         
         assert original == copied
         assert original is not copied

@@ -682,22 +682,22 @@ class TestFieldValidators:
         """Test that the field validator applies to all three specified fields."""
         # Test each field individually with too-short data
         for field_name in ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]:
-            with pytest.subTest(field=field_name):
-                # Arrange
-                base_data = {
-                    "AI0_Vibration": [1.0] * SEQUENCE_LENGTH,
-                    "AI1_Vibration": [2.0] * SEQUENCE_LENGTH,
-                    "AI2_Current": [3.0] * SEQUENCE_LENGTH
-                }
-                base_data[field_name] = [1.0] * (SEQUENCE_LENGTH - 1)
-                
-                # Act & Assert
-                with pytest.raises(ValidationError) as exc_info:
-                    SensorData(**base_data)
-                
-                error_msg = str(exc_info.value)
-                assert field_name in error_msg
-                assert "최소" in error_msg
+            # with pytest.subTest(field=field_name):
+            # Arrange
+            base_data = {
+                "AI0_Vibration": [1.0] * SEQUENCE_LENGTH,
+                "AI1_Vibration": [2.0] * SEQUENCE_LENGTH,
+                "AI2_Current": [3.0] * SEQUENCE_LENGTH
+            }
+            base_data[field_name] = [1.0] * (SEQUENCE_LENGTH - 1)
+            
+            # Act & Assert
+            with pytest.raises(ValidationError) as exc_info:
+                SensorData(**base_data)
+            
+            error_msg = str(exc_info.value)
+            assert field_name in error_msg
+            assert "최소" in error_msg
                 
     def test_field_validator_minimum_length_boundary(self):
         """Test field validator at the exact minimum length boundary."""
