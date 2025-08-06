@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 import logging
 from fastapi import FastAPI
 from app.core.model_cache import model_cache
@@ -39,10 +40,7 @@ app.include_router(predict_router.router)
 
 @app.get("/health")
 async def health():
-# at the top of services/press-fault-detection-model-service/app/main.py
-from datetime import timezone
-
-    # … inside your health check function …
+    
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
  
 @app.get("/ready")
