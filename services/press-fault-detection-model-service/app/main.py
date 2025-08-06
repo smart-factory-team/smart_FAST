@@ -39,7 +39,7 @@ app.include_router(predict_router.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "timestamp": datetime.now(timezone.utc)}
+    return {"status": "healthy", "timestamp": datetime.datetime.now(timezone.utc)}
  
 @app.get("/ready")
 async def ready():
