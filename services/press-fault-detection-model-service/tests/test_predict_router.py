@@ -325,6 +325,7 @@ class TestPredictRouter:
         assert hasattr(sensor_data, "AI1_Vibration")
         assert hasattr(sensor_data, "AI2_Current")
 
+    @pytest.mark.asyncio
     async def test_predict_fault_direct_function_call_success(self, valid_sensor_data, mock_prediction_result_normal):
         """Test direct function call to predict_fault with successful prediction."""
         # Arrange
@@ -342,6 +343,7 @@ class TestPredictRouter:
             assert result.reconstruction_error == 0.05
             assert not result.is_fault
 
+    @pytest.mark.asyncio
     async def test_predict_fault_direct_function_call_runtime_error(self, valid_sensor_data):
         """Test direct function call to predict_fault with RuntimeError."""
         # Arrange
@@ -357,6 +359,7 @@ class TestPredictRouter:
             assert exc_info.value.status_code == 503
             assert exc_info.value.detail == "Model initialization failed"
 
+    @pytest.mark.asyncio
     async def test_predict_fault_direct_function_call_generic_exception(self, valid_sensor_data):
         """Test direct function call to predict_fault with generic exception."""
         # Arrange
