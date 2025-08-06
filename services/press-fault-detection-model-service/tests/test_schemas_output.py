@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from services.press_fault_detection_model_service.schemas.output import PredictionResponse
+from app.schemas.output import PredictionResponse
 
 
 class TestPredictionResponse:
