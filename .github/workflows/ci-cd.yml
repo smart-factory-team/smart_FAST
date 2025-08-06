@@ -117,7 +117,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Check if service directory exists
         id: check-service
@@ -128,6 +128,11 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "⚠️ Service directory services/${{ matrix.service }} does not exist"
           fi
+
+      - name: Set environment variable for ${{ matrix.service }}
+        if: steps.check-service.outputs.exists == 'true'
+        run: |
+          echo "AZURE_CONNECTION_STRING=${{ secrets.AZURE_CONNECTION_STRING }}" >> $GITHUB_ENV
 
       - name: Install dependencies for ${{ matrix.service }}
         if: steps.check-service.outputs.exists == 'true'
