@@ -44,11 +44,11 @@ def load_threshold():
     try:
         repo_id = f"{ORG}/{REPO}"
         threshold_filename = "press_threshold.npy"
-        scaler_path = hf_hub_download(
+        threshold_path = hf_hub_download(
             repo_id=repo_id,
             filename=threshold_filename
         )
-        return np.load(scaler_path)
+        return np.load(threshold_path)
         
     except Exception as e:
         logger.error(f"임계치 로딩 실패: {str(e)}")
