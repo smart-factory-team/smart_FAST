@@ -3,6 +3,7 @@ import logging
 
 from app.core.model_cache import model_cache
 from app.schemas.input import SensorData, SEQUENCE_LENGTH
+from numpy.lib.stride_tricks import as_strided
 
 logger = logging.getLogger(__name__)
 FEATURE_NAMES = ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]
@@ -94,7 +95,9 @@ def flatten(X):
 
 def create_sequences(data, seq_length):
     """2D배열 데이터로부터 슬라이딩 윈도우 방식으로 시퀀스를 생성"""
-    sequences = []
-    for i in range(len(data) - seq_length +1):
-        sequences.append(data[i:(i +seq_length)])
-    return np.array(sequences)
+    if len(data) < seq_length:
+        return np.array([])
+    sequences = len(data) - seq_length + 1
+    return as_strided(data,
+                      shape=(sequences, seq_length, data.shape[1]),
+                      strides=(data.strides[0], data.strides[0], data.strides[1]))
