@@ -178,7 +178,7 @@ class TestPredictRouter:
     def test_predict_fault_invalid_json_format(self):
         """Test handling of invalid JSON in request body."""
         # Act
-        response = client.post("/predict", data="invalid json", headers={"Content-Type": "application/json"})
+        response = client.post("/predict", content="invalid json", headers={"Content-Type": "application/json"})
 
         # Assert
         assert response.status_code == 422

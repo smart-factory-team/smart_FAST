@@ -68,7 +68,7 @@ class TestPredictionResponse:
             "attribute_errors": {"sensor1": 0.5, "sensor2": 0.25}
         }
         response = PredictionResponse(**data)
-        serialized = response.dict()
+        serialized = response.model_dump()
         
         assert serialized == data
         assert isinstance(serialized, dict)
@@ -82,7 +82,7 @@ class TestPredictionResponse:
             "attribute_errors": {"temp": 0.01, "press": 0.02}
         }
         response = PredictionResponse(**data)
-        json_str = response.json()
+        json_str = response.model_dump_json()
         
         assert isinstance(json_str, str)
         assert '"prediction":"normal"' in json_str
@@ -337,7 +337,7 @@ class TestPredictionResponse:
         response2 = PredictionResponse(**data)
         
         assert response1 == response2
-        assert response1.dict() == response2.dict()
+        assert response1.model_dump() == response2.model_dump()
     
     def test_model_inequality(self):
         """Test inequality comparison between different model instances."""
@@ -356,7 +356,7 @@ class TestPredictionResponse:
         response2 = PredictionResponse(**data2)
         
         assert response1 != response2
-        assert response1.dict() != response2.dict()
+        assert response1.model_dump() != response2.model_dump()
     
     def test_model_copy(self):
         """Test copying model instances."""
@@ -368,7 +368,7 @@ class TestPredictionResponse:
         }
         
         original = PredictionResponse(**data)
-        copied = original.copy(deep=True)
+        copied = original.model_copy(deep=True)
         
         assert original == copied
         assert original is not copied
@@ -383,7 +383,7 @@ class TestPredictionResponse:
         }
         
         original = PredictionResponse(**data)
-        updated = original.copy(update={"prediction": "fault", "is_fault": True})
+        updated = original.model_copy(update={"prediction": "fault", "is_fault": True})
         
         assert original.prediction == "normal"
         assert original.is_fault is False
@@ -414,7 +414,7 @@ class TestPredictionResponse:
     
     def test_model_schema(self):
         """Test that the model schema is generated correctly."""
-        schema = PredictionResponse.schema()
+        schema = PredictionResponse.model_json_schema()
         
         assert "properties" in schema
         assert "prediction" in schema["properties"]
