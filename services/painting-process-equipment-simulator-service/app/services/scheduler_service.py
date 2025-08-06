@@ -115,10 +115,11 @@ class SimulatorScheduler:
 
     def get_status(self) -> dict:
         """스케줄러 상태 정보"""
+        jobs = self.scheduler.get_jobs()
         return {
             "is_running": self.is_running,
             "interval_minutes": settings.scheduler_interval_minutes,
-            "next_run": str(self.scheduler.get_jobs()[0].next_run_time) if self.scheduler.get_jobs() else None,
+            "next_run": str(jobs[0].next_run_time) if jobs else None,
             "total_services": len(settings.model_services)
         }
 

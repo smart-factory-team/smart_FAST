@@ -74,7 +74,7 @@ class ModelClient:
             async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
                 response = await client.get(health_url)
                 return response.status_code == 200
-        except:
+        except (httpx.HTTPError, asyncio.TimeoutError):
             return False
 
     async def health_check_all(self) -> Dict[str, bool]:
