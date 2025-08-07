@@ -41,13 +41,16 @@ class JSONFormatter(logging.Formatter):
             "line": record.lineno
         }
 
-        # 예외 정보 추가 (있는 경우)
-        if record.exc_info:
-            log_data["exception"] = {
-                "type": record.exc_info[0].__name__ if record.exc_info[0] else None,
-                "message": str(record.exc_info[1]) if record.exc_info[1] else None,
-                "traceback": self.formatException(record.exc_info)
-            }
+        if record.exc_info and len(record.exc_info) >= 2:
+            try:
+                exc_type, exc_value = record.exc_info[0], record.exc_info[1]
+                log_data["exception"] = {
+                    "type": exc_type.__name__ if exc_type and hasattr(exc_type, '__name__') else str(type(exc_type)),
+                    "message": str(exc_value) if exc_value is not None else None,
+                    "traceback": self.formatException(record.exc_info)
+                }
+            except Exception as e:
+                log_data["exception"] = {"error": f"Failed to format exception: {str(e)}"}
 
         # 추가 컨텍스트 정보 (record.extra에서)
         if hasattr(record, '__dict__'):
