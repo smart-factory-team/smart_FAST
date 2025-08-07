@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from app.config.settings import settings
 from app.services.scheduler_service import simulator_scheduler
 from app.routers import simulator_router
-from app.routers import test_connection_router
+from app.routers import connection_test_router
 import os
 
 
@@ -15,8 +15,7 @@ async def lifespan(app: FastAPI):
 
     # 환경 변수 체크
     if not settings.azure_connection_string:
-        print("⚠️ AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다.")
-        print("   .env 파일을 생성하거나 환경 변수를 설정해주세요.")
+        raise ValueError("AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다. .env 파일을 생성하거나 환경 변수를 설정해주세요.")
 
     # 로그 디렉토리 생성
     os.makedirs(settings.log_directory, exist_ok=True)
@@ -44,7 +43,7 @@ app = FastAPI(
 # 시뮬레이터 활성화/비활성화/상태확인 API 모음
 app.include_router(simulator_router.router, prefix="/simulator")
 # azure storage 연결, model serving 서비스 연결 확인 API 모음
-app.include_router(test_connection_router.router, prefix="/test")
+app.include_router(connection_test_router.router, prefix="/test")
 
 
 # 아래는 서비스 기본 정보 확인과 서비스 헬스 체크 api 정의
