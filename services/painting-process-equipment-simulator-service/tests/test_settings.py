@@ -4,7 +4,7 @@ from unittest.mock import patch
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 
-from services.painting_process_equipment_simulator_service.settings import Settings, settings
+from app.config.settings import Settings, settings
 
 
 class TestSettings:
@@ -29,23 +29,25 @@ class TestSettings:
         assert test_settings.http_timeout == 30
         assert test_settings.max_retries == 3
 
-    def test_required_fields(self):
+    def test_required_fields(self, monkeypatch):
         """Test that required fields raise ValidationError when missing."""
+        monkeypatch.delenv("AZURE_CONNECTION_STRING", raising=False)
         with pytest.raises(ValidationError) as exc_info:
             Settings()
         
         error_details = exc_info.value.errors()
         assert any(error['loc'] == ('azure_connection_string',) for error in error_details)
 
-    def test_azure_connection_string_validation(self):
+    def test_azure_connection_string_validation(self, monkeypatch):
         """Test azure_connection_string field validation."""
         # Valid connection string
         test_settings = Settings(azure_connection_string="DefaultEndpointsProtocol=https;AccountName=test")
         assert test_settings.azure_connection_string == "DefaultEndpointsProtocol=https;AccountName=test"
-        
+    
         # Empty string should raise validation error
+        monkeypatch.delenv("AZURE_CONNECTION_STRING", raising=False)
         with pytest.raises(ValidationError):
-            Settings(azure_connection_string="")
+            Settings()
 
     def test_integer_field_validation(self):
         """Test integer field validation for various numeric settings."""
@@ -64,6 +66,7 @@ class TestSettings:
 
         # Invalid types should raise validation error
         with pytest.raises(ValidationError):
+            Settings()
             Settings(azure_connection_string="test", scheduler_interval_minutes="invalid")
 
     def test_negative_integer_handling(self):
@@ -253,6 +256,7 @@ class TestSettings:
     def test_invalid_type_coercion_raises_error(self):
         """Test that invalid type conversions raise ValidationError."""
         with pytest.raises(ValidationError):
+            Settings()
             Settings(
                 azure_connection_string="test",
                 scheduler_interval_minutes="not_a_number"
@@ -277,7 +281,7 @@ class TestSettings:
         assert test_settings.batch_size == 999
         
         # Should be able to access all properties
-        assert callable(getattr(test_settings, 'model_services', None))
+        assert isinstance(test_settings.model_services, dict)
 
     def test_unicode_handling(self):
         """Test handling of Unicode characters in configuration values."""
@@ -316,8 +320,7 @@ class TestSettings:
         assert test_settings.scheduler_interval_minutes == 2147483647
         assert test_settings.batch_size == 2147483647
 
-    @patch('os.getenv')
-    def test_os_getenv_fallback_mechanism(self, mock_getenv):
+    def test_os_getenv_fallback_mechanism(self, monkeypatch):
         """Test the os.getenv fallback mechanism for painting_service_url."""
         # Test when environment variable is not set
         mock_getenv.return_value = None

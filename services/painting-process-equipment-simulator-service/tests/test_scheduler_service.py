@@ -5,50 +5,44 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.job import Job
 
-# Import the service under test
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 from app.services.scheduler_service import SimulatorScheduler, simulator_scheduler
 
 
+@pytest.fixture
+def scheduler_instance():
+    """Create a fresh scheduler instance for each test"""
+    return SimulatorScheduler()
+
+@pytest.fixture
+def mock_settings():
+    """Mock settings configuration"""
+    with patch('app.services.scheduler_service.settings') as mock_settings:
+        mock_settings.scheduler_interval_minutes = 5
+        mock_settings.model_services = {
+            'service1': {'url': 'http://service1'},
+            'service2': {'url': 'http://service2'}
+        }
+        yield mock_settings
+
+@pytest.fixture
+def mock_azure_storage():
+    """Mock Azure storage service"""
+    with patch('app.services.scheduler_service.azure_storage') as mock_storage:
+        yield mock_storage
+
+@pytest.fixture
+def mock_model_client():
+    """Mock model client service"""
+    with patch('app.services.scheduler_service.model_client') as mock_client:
+        yield mock_client
+
+@pytest.fixture
+def mock_anomaly_logger():
+    """Mock anomaly logger"""
+    with patch('app.services.scheduler_service.anomaly_logger') as mock_logger:
+        yield mock_logger
+
 class TestSimulatorScheduler:
-    """Test suite for SimulatorScheduler class"""
-    
-    @pytest.fixture
-    def scheduler_instance(self):
-        """Create a fresh scheduler instance for each test"""
-        return SimulatorScheduler()
-    
-    @pytest.fixture
-    def mock_settings(self):
-        """Mock settings configuration"""
-        with patch('app.services.scheduler_service.settings') as mock_settings:
-            mock_settings.scheduler_interval_minutes = 5
-            mock_settings.model_services = {
-                'service1': {'url': 'http://service1'},
-                'service2': {'url': 'http://service2'}
-            }
-            yield mock_settings
-    
-    @pytest.fixture
-    def mock_azure_storage(self):
-        """Mock Azure storage service"""
-        with patch('app.services.scheduler_service.azure_storage') as mock_storage:
-            yield mock_storage
-    
-    @pytest.fixture
-    def mock_model_client(self):
-        """Mock model client service"""
-        with patch('app.services.scheduler_service.model_client') as mock_client:
-            yield mock_client
-    
-    @pytest.fixture
-    def mock_anomaly_logger(self):
-        """Mock anomaly logger"""
-        with patch('app.services.scheduler_service.anomaly_logger') as mock_logger:
-            yield mock_logger
 
     def test_init_creates_scheduler_instance(self):
         """Test scheduler initialization creates AsyncIOScheduler instance"""
@@ -341,6 +335,7 @@ class TestGlobalSchedulerInstance:
         assert hasattr(simulator_scheduler, 'scheduler')
 
 
+@pytest.mark.usefixtures("mock_settings", "mock_model_client")
 class TestSchedulerIntegration:
     """Integration tests for scheduler service"""
     
@@ -391,6 +386,7 @@ class TestSchedulerIntegration:
         scheduler.scheduler.shutdown.assert_not_called()
 
 
+@pytest.mark.usefixtures("scheduler_instance", "mock_azure_storage", "mock_model_client", "mock_anomaly_logger")
 class TestSchedulerEdgeCases:
     """Test edge cases and error conditions"""
     

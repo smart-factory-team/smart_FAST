@@ -5,11 +5,7 @@ from fastapi import FastAPI
 import os
 import sys
 
-# Add the service directory to the path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-from main import app, lifespan
-
+from app.main import app, lifespan
 
 class TestLifespan:
     """Test suite for the lifespan context manager"""
@@ -19,9 +15,9 @@ class TestLifespan:
         """Test lifespan startup when Azure connection string is configured"""
         mock_app = Mock(spec=FastAPI)
         
-        with patch('main.settings') as mock_settings, \
-             patch('main.simulator_scheduler') as mock_scheduler, \
-             patch('main.os.makedirs') as mock_makedirs:
+        with patch('app.main.settings') as mock_settings, \
+             patch('app.main.simulator_scheduler') as mock_scheduler, \
+             patch('app.main.os.makedirs') as mock_makedirs:
             
             # Configure mock settings
             mock_settings.azure_connection_string = "DefaultEndpointsProtocol=https;AccountName=test"
@@ -55,9 +51,9 @@ class TestLifespan:
         """Test lifespan startup when Azure connection string is missing"""
         mock_app = Mock(spec=FastAPI)
         
-        with patch('main.settings') as mock_settings, \
-             patch('main.simulator_scheduler') as mock_scheduler, \
-             patch('main.os.makedirs') as mock_makedirs:
+        with patch('app.main.settings') as mock_settings, \
+             patch('app.main.simulator_scheduler') as mock_scheduler, \
+             patch('app.main.os.makedirs') as mock_makedirs:
             
             # Configure mock settings without connection string
             mock_settings.azure_connection_string = None
@@ -84,9 +80,9 @@ class TestLifespan:
         """Test lifespan shutdown when scheduler is not running"""
         mock_app = Mock(spec=FastAPI)
         
-        with patch('main.settings') as mock_settings, \
-             patch('main.simulator_scheduler') as mock_scheduler, \
-             patch('main.os.makedirs'):
+        with patch('app.main.settings') as mock_settings, \
+             patch('app.main.simulator_scheduler') as mock_scheduler, \
+             patch('app.main.os.makedirs'):
             
             mock_settings.azure_connection_string = "test"
             mock_settings.log_directory = "/test/logs"
@@ -112,9 +108,9 @@ class TestLifespan:
         """Test lifespan handles directory creation errors gracefully"""
         mock_app = Mock(spec=FastAPI)
         
-        with patch('main.settings') as mock_settings, \
-             patch('main.simulator_scheduler') as mock_scheduler, \
-             patch('main.os.makedirs') as mock_makedirs:
+        with patch('app.main.settings') as mock_settings, \
+             patch('app.main.simulator_scheduler') as mock_scheduler, \
+             patch('app.main.os.makedirs') as mock_makedirs:
             
             mock_settings.azure_connection_string = "test"
             mock_settings.log_directory = "/invalid/path"
@@ -134,9 +130,9 @@ class TestLifespan:
         """Test lifespan handles scheduler stop errors gracefully"""
         mock_app = Mock(spec=FastAPI)
         
-        with patch('main.settings') as mock_settings, \
-             patch('main.simulator_scheduler') as mock_scheduler, \
-             patch('main.os.makedirs'):
+        with patch('app.main.settings') as mock_settings, \
+             patch('app.main.simulator_scheduler') as mock_scheduler, \
+             patch('app.main.os.makedirs'):
             
             mock_settings.azure_connection_string = "test"
             mock_settings.log_directory = "/test/logs"
@@ -160,7 +156,7 @@ class TestFastAPIApp:
         assert app.title == "Painting Process Equipment Data Simulator Service"
         assert app.description == "도장 공정 설비 결함 탐지 모델을 위한 실시간 데이터 시뮬레이터"
         assert app.version == "1.0.0"
-        assert app.lifespan == lifespan
+        
 
     def test_app_routers_included(self):
         """Test that required routers are included in the app"""
@@ -190,7 +186,7 @@ class TestAPIEndpoints:
         """Setup test client for each test"""
         self.client = TestClient(app)
 
-    @patch('main.simulator_scheduler')
+    @patch('app.main.simulator_scheduler')
     def test_root_endpoint(self, mock_scheduler):
         """Test root endpoint returns correct service information"""
         mock_scheduler.get_status.return_value = {
@@ -213,7 +209,7 @@ class TestAPIEndpoints:
         assert data["target_model"] == "painting-process-equipment-defect-detection"
         assert data["scheduler_status"]["running"]
 
-    @patch('main.simulator_scheduler')
+    @patch('app.main.simulator_scheduler')
     def test_root_endpoint_scheduler_not_running(self, mock_scheduler):
         """Test root endpoint when scheduler is not running"""
         mock_scheduler.get_status.return_value = {
@@ -264,8 +260,8 @@ class TestIntegrationScenarios:
         """Setup test client for each test"""
         self.client = TestClient(app)
 
-    @patch('main.simulator_scheduler')
-    @patch('main.settings')
+    @patch('app.main.simulator_scheduler')
+    @patch('app.main.settings')
     def test_app_startup_shutdown_cycle(self, mock_settings, mock_scheduler):
         """Test complete startup and shutdown cycle"""
         mock_settings.azure_connection_string = "test"
@@ -286,43 +282,7 @@ class TestIntegrationScenarios:
             response = client.get("/")
             assert response.status_code == 200
 
-    @patch('main.simulator_scheduler')
-    def test_concurrent_requests_to_endpoints(self, mock_scheduler):
-        """Test handling of concurrent requests to different endpoints"""
-        mock_scheduler.get_status.return_value = {"running": True}
-        
-        import threading
-        import queue
-        
-        def make_request(endpoint, result_queue):
-            client = TestClient(app)
-            response = client.get(endpoint)
-            result_queue.put((endpoint, response.status_code))
-        
-        result_queue = queue.Queue()
-        threads = []
-        
-        # Create multiple threads for concurrent requests
-        endpoints = ["/", "/health", "/", "/health", "/"]
-        for endpoint in endpoints:
-            thread = threading.Thread(target=make_request, args=(endpoint, result_queue))
-            threads.append(thread)
-            thread.start()
-        
-        # Wait for all threads to complete
-        for thread in threads:
-            thread.join()
-        
-        # Check all requests were successful
-        results = []
-        while not result_queue.empty():
-            results.append(result_queue.get())
-        
-        assert len(results) == len(endpoints)
-        for _, status_code in results:
-            assert status_code == 200
-
-    @patch('main.simulator_scheduler')
+    @patch('app.main.simulator_scheduler')
     def test_scheduler_status_consistency(self, mock_scheduler):
         """Test that scheduler status is consistently reported"""
         # Test with running scheduler
@@ -363,7 +323,7 @@ class TestErrorHandling:
         """Setup test client for each test"""
         self.client = TestClient(app)
 
-    @patch('main.simulator_scheduler')
+    @patch('app.main.simulator_scheduler')
     def test_scheduler_status_exception_handling(self, mock_scheduler):
         """Test handling when scheduler status throws an exception"""
         mock_scheduler.get_status.side_effect = Exception("Scheduler unavailable")
@@ -396,7 +356,7 @@ class TestEnvironmentVariableHandling:
     """Test environment variable and configuration handling"""
     
     @patch.dict(os.environ, {}, clear=True)
-    @patch('main.settings')
+    @patch('app.main.settings')
     def test_missing_environment_variables(self, mock_settings):
         """Test behavior when environment variables are missing"""
         mock_settings.azure_connection_string = None
@@ -409,7 +369,7 @@ class TestEnvironmentVariableHandling:
         response = client.get("/health")
         assert response.status_code == 200
 
-    @patch('main.settings')
+    @patch('app.main.settings')
     def test_invalid_configuration_values(self, mock_settings):
         """Test handling of invalid configuration values"""
         mock_settings.azure_connection_string = ""

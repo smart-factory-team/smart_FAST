@@ -59,7 +59,9 @@ class TestAnomalyLogger:
     def test_log_anomaly_writes_correct_json_format(self, mock_file, mock_print, mock_datetime):
         """Test that log_anomaly writes the correct JSON format to file."""
         # Setup mock datetime
-        mock_datetime.now.return_value.isoformat.return_value = '2023-12-01T10:30:00'
+        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
+
+        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
 
         # Test data
         service_name = "TestService"
@@ -179,7 +181,7 @@ class TestAnomalyLogger:
     def test_log_error_with_original_data(self, mock_file, mock_print, mock_datetime):
         """Test log_error writes error to file and prints to console."""
         # Setup mock datetime
-        mock_datetime.now.return_value.isoformat.return_value = '2023-12-01T10:30:00'
+        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
 
         service_name = "TestService"
         error_message = "Connection timeout"
@@ -215,7 +217,7 @@ class TestAnomalyLogger:
     @patch('builtins.open', new_callable=mock_open)
     def test_log_error_without_original_data(self, mock_file, mock_print, mock_datetime):
         """Test log_error works when original_data is None."""
-        mock_datetime.now.return_value.isoformat.return_value = '2023-12-01T10:30:00'
+        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
 
         service_name = "TestService"
         error_message = "Invalid configuration"
@@ -278,7 +280,7 @@ class TestAnomalyLogger:
     @patch('builtins.open', new_callable=mock_open)
     def test_json_serialization_with_complex_data_types(self, mock_file, mock_datetime):
         """Test JSON serialization handles complex data types correctly."""
-        mock_datetime.now.return_value.isoformat.return_value = '2023-12-01T10:30:00'
+        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
 
         # Test with nested dictionaries and lists
         service_name = "TestService"
@@ -313,8 +315,9 @@ class TestAnomalyLogger:
         """Test that global anomaly_logger instance is created."""
         assert isinstance(anomaly_logger, AnomalyLogger)
 
+    @patch('app.utils.logger.datetime')
     @patch('builtins.open', new_callable=mock_open)
-    def test_multiple_anomaly_logs_append_correctly(self, mock_file):
+    def test_multiple_anomaly_logs_append_correctly(self, mock_file, mock_datetime):
         """Test that multiple anomaly logs are appended to the same file."""
         service_name = "TestService"
         prediction_result_1 = {'machineId': 'MACHINE_001', 'issue': 'Issue 1'}
@@ -327,16 +330,23 @@ class TestAnomalyLogger:
             logger.log_anomaly(service_name, prediction_result_1, original_data)
             logger.log_anomaly(service_name, prediction_result_2, original_data)
 
-        # Verify file was opened twice in append mode
-        expected_log_path = os.path.join(self.temp_dir, 'anomaly_test.log')
-        expected_calls = [
-            call(expected_log_path, "a", encoding="utf-8"),
-            call(expected_log_path, "a", encoding="utf-8")
-        ]
-        mock_file.assert_has_calls(expected_calls)
+        handle = mock_file()
+        handle.write.assert_any_call(json.dumps({
+            "timestamp": "2025-08-07T10:49:54.383476",
+            "service_name": service_name,
+            "prediction": prediction_result_1,
+            "original_data": original_data
+        }, ensure_ascii=False) + '\n')
+        handle.write.assert_any_call(json.dumps({
+            "timestamp": "2025-08-07T10:49:54.385422",
+            "service_name": service_name,
+            "prediction": prediction_result_2,
+            "original_data": original_data
+        }, ensure_ascii=False) + '\n')
 
+    @patch('app.utils.logger.datetime')
     @patch('builtins.open', new_callable=mock_open)
-    def test_multiple_error_logs_append_correctly(self, mock_file):
+    def test_multiple_error_logs_append_correctly(self, mock_file, mock_datetime):
         """Test that multiple error logs are appended to the same file."""
         service_name = "TestService"
 
@@ -346,13 +356,19 @@ class TestAnomalyLogger:
             logger.log_error(service_name, "Error 1")
             logger.log_error(service_name, "Error 2")
 
-        # Verify error file was opened twice in append mode
-        expected_error_log_path = os.path.join(self.temp_dir, 'error_test.log')
-        expected_calls = [
-            call(expected_error_log_path, "a", encoding="utf-8"),
-            call(expected_error_log_path, "a", encoding="utf-8")
-        ]
-        mock_file.assert_has_calls(expected_calls)
+        handle = mock_file()
+        handle.write.assert_any_call(json.dumps({
+            "timestamp": "2025-08-07T10:49:54.567706",
+            "service_name": service_name,
+            "error": "Error 1",
+            "original_data": None
+        }, ensure_ascii=False) + '\n')
+        handle.write.assert_any_call(json.dumps({
+            "timestamp": "2025-08-07T10:49:54.567706",
+            "service_name": service_name,
+            "error": "Error 2",
+            "original_data": None
+        }, ensure_ascii=False) + '\n')
 
     def test_log_file_paths_are_constructed_correctly(self):
         """Test that log file paths are constructed correctly from settings."""

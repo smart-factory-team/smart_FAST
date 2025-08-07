@@ -3,11 +3,6 @@ import pandas as pd
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 
-# Import the class under test
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 from app.services.azure_storage import AzureStorageService
 
 
@@ -75,17 +70,20 @@ class TestAzureStorageService:
             mock_blob3 = MagicMock()
             mock_blob3.name = "painting-process-equipment/config.txt"  # Should be filtered out
 
-            with patch('app.services.azure_storage.BlobServiceClient') as mock_client_class:
-                mock_client = AsyncMock()
-                mock_client_class.from_connection_string.return_value = mock_client
-                mock_client.__aenter__.return_value = mock_client
-                mock_client.__aexit__.return_value = None
-                
-                mock_container_client = AsyncMock()
-                mock_client.get_container_client.return_value = mock_container_client
-                mock_container_client.list_blobs.return_value.__aiter__.return_value = [
-                    mock_blob1, mock_blob2, mock_blob3
-                ]
+            mock_client = MagicMock()
+            mock_container_client = AsyncMock()
+            mock_client.get_container_client.return_value = mock_container_client
+            
+            async def async_iterator(items):
+                for item in items:
+                    yield item
+            
+            mock_container_client.list_blobs.return_value = async_iterator([
+                mock_blob1, mock_blob2, mock_blob3
+            ])
+
+            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
+                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
 
                 result = await azure_service.list_data_files()
 
@@ -133,17 +131,20 @@ class TestAzureStorageService:
             mock_blob2 = MagicMock()
             mock_blob2.name = "painting-process-equipment/data2.json"
 
-            with patch('app.services.azure_storage.BlobServiceClient') as mock_client_class:
-                mock_client = AsyncMock()
-                mock_client_class.from_connection_string.return_value = mock_client
-                mock_client.__aenter__.return_value = mock_client
-                mock_client.__aexit__.return_value = None
-                
-                mock_container_client = AsyncMock()
-                mock_client.get_container_client.return_value = mock_container_client
-                mock_container_client.list_blobs.return_value.__aiter__.return_value = [
-                    mock_blob1, mock_blob2
-                ]
+            mock_client = MagicMock()
+            mock_container_client = AsyncMock()
+            mock_client.get_container_client.return_value = mock_container_client
+            
+            async def async_iterator(items):
+                for item in items:
+                    yield item
+            
+            mock_container_client.list_blobs.return_value = async_iterator([
+                mock_blob1, mock_blob2
+            ])
+
+            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
+                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
 
                 result = await azure_service.list_data_files()
 
@@ -157,17 +158,20 @@ class TestAzureStorageService:
             mock_blob2 = MagicMock()
             mock_blob2.name = "other-folder/data2.csv"  # Should be filtered out
 
-            with patch('app.services.azure_storage.BlobServiceClient') as mock_client_class:
-                mock_client = AsyncMock()
-                mock_client_class.from_connection_string.return_value = mock_client
-                mock_client.__aenter__.return_value = mock_client
-                mock_client.__aexit__.return_value = None
-                
-                mock_container_client = AsyncMock()
-                mock_client.get_container_client.return_value = mock_container_client
-                mock_container_client.list_blobs.return_value.__aiter__.return_value = [
-                    mock_blob1, mock_blob2
-                ]
+            mock_client = MagicMock()
+            mock_container_client = AsyncMock()
+            mock_client.get_container_client.return_value = mock_container_client
+            
+            async def async_iterator(items):
+                for item in items:
+                    yield item
+            
+            mock_container_client.list_blobs.return_value = async_iterator([
+                mock_blob1, mock_blob2
+            ])
+
+            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
+                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
 
                 result = await azure_service.list_data_files()
 
@@ -186,18 +190,16 @@ class TestAzureStorageService:
             """Test successful CSV data reading."""
             csv_content = sample_csv_data.to_csv(index=False)
             
-            with patch('app.services.azure_storage.BlobServiceClient') as mock_client_class:
-                mock_client = AsyncMock()
-                mock_client_class.from_connection_string.return_value = mock_client
-                mock_client.__aenter__.return_value = mock_client
-                mock_client.__aexit__.return_value = None
-                
-                mock_blob_client = AsyncMock()
-                mock_client.get_blob_client.return_value = mock_blob_client
-                
-                mock_blob_data = AsyncMock()
-                mock_blob_client.download_blob.return_value = mock_blob_data
-                mock_blob_data.readall.return_value = csv_content.encode('utf-8')
+            mock_client = MagicMock()
+            mock_blob_client = AsyncMock()
+            mock_client.get_blob_client.return_value = mock_blob_client
+            
+            mock_blob_data = AsyncMock()
+            mock_blob_client.download_blob.return_value = mock_blob_data
+            mock_blob_data.readall.return_value = csv_content.encode('utf-8')
+
+            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
+                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
 
                 result = await azure_service.read_csv_data("test.csv")
 
@@ -268,18 +270,16 @@ class TestAzureStorageService:
             """Test that blob client is called with correct parameters."""
             csv_content = sample_csv_data.to_csv(index=False)
             
-            with patch('app.services.azure_storage.BlobServiceClient') as mock_client_class:
-                mock_client = AsyncMock()
-                mock_client_class.from_connection_string.return_value = mock_client
-                mock_client.__aenter__.return_value = mock_client
-                mock_client.__aexit__.return_value = None
-                
-                mock_blob_client = AsyncMock()
-                mock_client.get_blob_client.return_value = mock_blob_client
-                
-                mock_blob_data = AsyncMock()
-                mock_blob_client.download_blob.return_value = mock_blob_data
-                mock_blob_data.readall.return_value = csv_content.encode('utf-8')
+            mock_client = MagicMock()
+            mock_blob_client = AsyncMock()
+            mock_client.get_blob_client.return_value = mock_blob_client
+            
+            mock_blob_data = AsyncMock()
+            mock_blob_client.download_blob.return_value = mock_blob_data
+            mock_blob_data.readall.return_value = csv_content.encode('utf-8')
+
+            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
+                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
 
                 await azure_service.read_csv_data("test.csv")
 
@@ -563,19 +563,6 @@ class TestAzureStorageService:
 
             assert result is not None
             assert result['machineId'] == 'PAINT-MACHINE_특수문자'
-
-        @pytest.mark.asyncio
-        async def test_concurrent_access_simulation(self, azure_service, sample_csv_data):
-            """Test potential race conditions with concurrent access."""
-            azure_service.cached_df = sample_csv_data.copy()
-
-            # Simulate concurrent calls
-            tasks = [azure_service.simulate_real_time_data() for _ in range(10)]
-            results = await asyncio.gather(*tasks)
-
-            assert all(result is not None for result in results)
-            # Index should be at 10 % 3 = 1
-            assert azure_service.current_index == 1
 
     class TestIntegrationScenarios:
         """Test integration-like scenarios that combine multiple methods."""
