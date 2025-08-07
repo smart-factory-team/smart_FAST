@@ -12,8 +12,6 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-
 # 애플리케이션 코드 복사
 COPY app/ ./app/
 
@@ -21,10 +19,10 @@ COPY app/ ./app/
 RUN mkdir -p logs
 
 # 포트 노출
-EXPOSE 8008
+EXPOSE 8011
 
 # 환경 변수 설정
 ENV PYTHONPATH=/app
 
 # 애플리케이션 실행
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8008"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8011"]

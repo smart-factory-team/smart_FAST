@@ -64,10 +64,10 @@ painting-process-equipment-simulator-service/
 
 4.  **애플리케이션 실행**:
     ```bash
-    # 포트 8008에서 실행
-    uvicorn app.main:app --host 0.0.0.0 --port 8008 --reload
+    # 포트 8011에서 실행
+    uvicorn app.main:app --reload --port 8011 
     ```
-    실행 후 `http://localhost:8008/docs`에서 API 문서를 확인할 수 있습니다.
+    실행 후 `http://localhost:8011/docs`에서 API 문서를 확인할 수 있습니다.
 
 ### 4.2. Docker를 이용한 실행
 
@@ -92,9 +92,10 @@ painting-process-equipment-simulator-service/
 
 4.  **시뮬레이터 서비스 Docker 컨테이너 실행**:
     `--env-file` 옵션을 사용하여 호스트의 `.env` 파일을 컨테이너의 환경 변수로 안전하게 주입합니다.
+    혹시 Azure storage가 잘 불러와지지 않는다면 -e AZURE_CONNECTION_STRING="Access-Key"를 직접 추가해주세요.
     ```bash
     docker run --name simulator-service --network smart-fast-net \
-      -p 8008:8008 \
+      -p 8011:8011 \
       --env-file ./.env \
       -e PAINTING_SERVICE_URL="http://model-service:8001" \
       simulator-service
@@ -108,7 +109,7 @@ painting-process-equipment-simulator-service/
 
 ## 5. API 엔드포인트
 
-서비스가 시작되면 `http://localhost:8008/docs` (또는 Docker IP)에서 API 문서를 통해 아래 엔드포인트를 테스트할 수 있습니다.
+서비스가 시작되면 `http://localhost:8011/docs` (또는 Docker IP)에서 API 문서를 통해 아래 엔드포인트를 테스트할 수 있습니다.
 
 | HTTP Method | Endpoint                          | Description                                |
 | :---------- | :-------------------------------- | :----------------------------------------- |
