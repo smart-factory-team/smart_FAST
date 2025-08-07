@@ -75,7 +75,15 @@ async def get_model_manager() -> 'DefectDetectionModelManager':
         logger.info(f"모델 로드 상태: {is_loaded}")
     except Exception as e:
         logger.error(f"is_loaded 접근 중 오류: {e}")
-        raise HTTPException(...)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "success": False,
+                "message": f"모델 로드 상태 확인 중 오류가 발생했습니다: {str(e)}",
+                "error_code": "MODEL_STATUS_CHECK_ERROR",
+                "timestamp": datetime.now().isoformat()
+            }
+        ) from e
 
     if not is_loaded:
         logger.warning("모델이 로드되지 않았습니다")
