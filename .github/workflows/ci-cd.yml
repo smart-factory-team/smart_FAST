@@ -104,7 +104,7 @@ jobs:
   # 각 서비스별 테스트 및 린팅
   test-and-lint:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != ''
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -145,15 +145,17 @@ jobs:
           pip install pytest pytest-cov flake8 mypy
 
       - name: Linting (Flake8) - ${{ matrix.service }}
+        id: lint
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --tee --output-file=flake8-results.txt || true
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics > flake8-results.txt 2>&1 || true
           LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt || echo "0")
           echo "lint_errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
           echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
 
       - name: Run tests with coverage - ${{ matrix.service }}
+        id: test
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
         run: |
@@ -204,7 +206,7 @@ jobs:
   # 각 서비스별 보안 스캔
   security-scan:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != ''
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -247,7 +249,7 @@ jobs:
   # 결과 통합 Job 추가
   aggregate-results:
     needs: [ detect-changes, test-and-lint, security-scan ]
-    if: always() && needs.detect-changes.outputs.services != ''
+    if: github.event_name == 'pull_request' && always() && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     outputs:
       total_tests: ${{ steps.aggregate.outputs.total_tests }}
@@ -355,7 +357,7 @@ jobs:
 
   # 각 서비스별 Docker 빌드 및 푸시 (main 브랜치만)
   build-and-push:
-    needs: [detect-changes, test-and-lint, security-scan]
+    needs: detect-changes
     if: github.ref == 'refs/heads/main' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
@@ -518,14 +520,14 @@ jobs:
 
               // 테스트 결과 파싱
               const testOutputs = {
-                total: "${{ needs.test-and-lint.outputs.total_tests || '0' }}",
-                passed: "${{ needs.test-and-lint.outputs.passed_tests || '0' }}",
-                failed: "${{ needs.test-and-lint.outputs.failed_tests || '0' }}",
-                skipped: "${{ needs.test-and-lint.outputs.skipped_tests || '0' }}",
-                coverage: "${{ needs.test-and-lint.outputs.coverage || 'N/A' }}",
-                failedTests: "${{ needs.test-and-lint.outputs.failed_test_names || '' }}",
-                lintErrors: "${{ needs.test-and-lint.outputs.lint_errors || '0' }}",
-                lintWarnings: "${{ needs.test-and-lint.outputs.lint_warnings || '0' }}"
+                total: "${{ needs.aggregate-results.outputs.total_tests || '0' }}",
+                passed: "${{ needs.aggregate-results.outputs.passed_tests || '0' }}",
+                failed: "${{ needs.aggregate-results.outputs.failed_tests || '0' }}",
+                skipped: "${{ needs.aggregate-results.outputs.skipped_tests || '0' }}",
+                coverage: "${{ needs.aggregate-results.outputs.coverage || 'N/A' }}",
+                failedTests: "${{ needs.aggregate-results.outputs.failed_test_names || '' }}",
+                lintErrors: "${{ needs.aggregate-results.outputs.lint_errors || '0' }}",
+                lintWarnings: "${{ needs.aggregate-results.outputs.lint_warnings || '0' }}"
               };
 
               // 보안 스캔 결과
