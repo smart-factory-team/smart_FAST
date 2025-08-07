@@ -17,3 +17,4 @@ __pycache__/
 *.err
 *.tmp
 *.jsonl
+services/welding-machine-data-simulator-service/logs/welding_anomaly_detections.json
