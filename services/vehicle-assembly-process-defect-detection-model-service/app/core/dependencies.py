@@ -10,7 +10,7 @@ FastAPI 의존성 주입 모듈
 
 import uuid
 import logging
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from fastapi import Depends, HTTPException, status, Request
 from datetime import datetime
 
@@ -19,8 +19,11 @@ from app.core.config import settings
 # 로거 설정
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from app.services.model_manager import DefectDetectionModelManager
+
 # 전역 모델 매니저 인스턴스
-_model_manager: Optional['DefectDetectionModelManager'] = None
+_model_manager: Optional[DefectDetectionModelManager] = None
 
 
 async def get_request_id() -> str:
