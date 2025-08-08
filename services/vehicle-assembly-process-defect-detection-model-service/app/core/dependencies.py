@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from app.services.model_manager import DefectDetectionModelManager
 
 # 전역 모델 매니저 인스턴스
-_model_manager: Optional[DefectDetectionModelManager] = None
+_model_manager: Optional['DefectDetectionModelManager'] = None
 
 
 async def get_request_id() -> str:

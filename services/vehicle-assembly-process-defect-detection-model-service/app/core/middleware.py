@@ -18,7 +18,6 @@ from collections import defaultdict
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -345,60 +344,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return f"ip:{client_ip}"
 
 
-# === 모델 상태 확인 미들웨어 ===
-
-class ModelHealthMiddleware(BaseHTTPMiddleware):
-    """
-    모델 상태를 확인하고 필요시 요청을 차단하는 미들웨어
-
-    모델이 로드되지 않은 상태에서의 예측 요청을 방지합니다.
-    """
-
-    def __init__(self, app):
-        super().__init__(app)
-
-        # 모델 상태 확인이 필요한 경로들
-        self.model_required_paths = {"/predict", "/predict/file", "/predict/batch"}
-
-        # 항상 허용할 경로들
-        self.always_allowed_paths = {
-            "/", "/health", "/ready", "/startup",
-            "/docs", "/redoc", "/openapi.json",
-            "/model/info", "/model/classes"
-        }
-
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # 모델 확인이 필요없는 경로는 통과
-        if (request.url.path in self.always_allowed_paths or
-            not any(request.url.path.startswith(path) for path in self.model_required_paths)):
-            return await call_next(request)
-
-        # 앱 상태에서 모델 매니저 확인
-
-        model_manager = getattr(request.app.state, "model_manager", None)
-        logger.info(f"모델 상태 확인중 - model_manager: {model_manager}")
-
-        if not model_manager or not model_manager.is_loaded:
-            request_id = getattr(request.state, "request_id", "unknown")
-            logger.warning(
-                f"모델 미로드 상태에서 예측 요청 차단: {request.url.path} "
-                f"(Request ID: {request_id})"
-            )
-
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "success": False,
-                    "message": "AI 모델이 로드되지 않았습니다. 잠시 후 다시 시도해주세요.",
-                    "error_code": "MODEL_NOT_LOADED",
-                    "timestamp": datetime.now().isoformat(),
-                    "request_id": request_id
-                }
-            )
-
-        return await call_next(request)
-
-
 # === 미들웨어 설정 함수 ===
 
 def setup_middleware(app: FastAPI) -> None:
@@ -409,25 +354,37 @@ def setup_middleware(app: FastAPI) -> None:
         app: FastAPI 인스턴스
     """
 
-    # 1. 신뢰할 수 있는 호스트 설정 (프로덕션에서만)
-#     if settings.ENVIRONMENT == "production":
-#         app.add_middleware(
-#             TrustedHostMiddleware,
-#             allowed_hosts=["*"]  # 실제 운영에서는 특정 도메인으로 제한
-#         )
+    # 1. CORS 미들웨어 (필수 - API 접근을 위해)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["X-Request-ID", "X-Processing-Time"]
+    )
 
-    # 2. CORS 미들웨어
-#     app.add_middleware(
-#         CORSMiddleware,
-#         allow_origins=settings.CORS_ORIGINS,
-#         allow_credentials=True,
-#         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-#         allow_headers=["*"],
-#         expose_headers=["X-Request-ID", "X-Processing-Time"]
-#     )
+    # 2. 보안 헤더 미들웨어 (필수 - 기본 보안)
+    app.add_middleware(SecurityHeadersMiddleware)
 
-    # 3. 보안 헤더 미들웨어
-#     app.add_middleware(SecurityHeadersMiddleware)
+    # 3. 로깅 미들웨어 (필수 - 요청 추적)
+    app.add_middleware(
+        LoggingMiddleware,
+        log_body=False,  # body는 로깅 안함
+        max_body_size=0
+    )
+
+    # 4. 처리 시간 측정 미들웨어 (필수 - 성능 모니터링)
+    app.add_middleware(
+        ProcessingTimeMiddleware,
+        log_slow_requests=True,
+        slow_threshold=2.0  # 2초 이상 소요되는 요청 로깅
+    )
+
+    # 5. 요청 ID 미들웨어 (필수 - 가장 먼저 실행되도록 마지막에 추가)
+    app.add_middleware(RequestIDMiddleware)
+
+    logger.info("필수 미들웨어 설정 완료 - CORS, 보안헤더, 로깅, 처리시간, 요청ID")
 
     # 4. Rate Limiting 미들웨어 (프로덕션에서만)
 #     if settings.ENVIRONMENT == "production":
@@ -437,28 +394,6 @@ def setup_middleware(app: FastAPI) -> None:
 #             burst_limit=20,  # 10초간 20회
 #             enabled=True
 #         )
-
-    # 5. 모델 상태 확인 미들웨어
-    # app.add_middleware(ModelHealthMiddleware)
-
-    # 6. 로깅 미들웨어
-#     app.add_middleware(
-#         LoggingMiddleware,
-#         log_body=settings.DEBUG,  # 개발환경에서만 본문 로깅
-#         max_body_size=1024
-#     )
-
-    # 7. 처리 시간 측정 미들웨어
-#     app.add_middleware(
-#         ProcessingTimeMiddleware,
-#         log_slow_requests=True,
-#         slow_threshold=2.0  # 2초 이상 소요되는 요청 로깅
-#     )
-
-    # 8. 요청 ID 미들웨어 (가장 먼저 실행되도록 마지막에 추가)
-#     app.add_middleware(RequestIDMiddleware)
-#
-#     logger.info("미들웨어 설정 완료")
 
 
 # === 미들웨어 상태 조회 ===
