@@ -363,10 +363,10 @@ class PredictionService:
 
         except aiohttp.ClientError as e:
             self.logger.error(f"URL 이미지 로드 실패: {e}")
-            raise InvalidImageException(f"URL 이미지 로드 실패: {str(e)}")
+            raise InvalidImageException(f"URL 이미지 로드 실패: {str(e)}") from e
         except Exception as e:
             self.logger.error(f"URL 이미지 처리 실패: {e}")
-            raise InvalidImageException(f"URL 이미지 처리 실패: {str(e)}")
+            raise InvalidImageException(f"URL 이미지 처리 실패: {str(e)}") from e
 
     async def _load_image_from_file(self, file: UploadFile) -> Image.Image:
         """
@@ -396,7 +396,7 @@ class PredictionService:
 
         except Exception as e:
             self.logger.error(f"파일 이미지 로드 실패: {e}")
-            raise InvalidImageException(f"파일 이미지 로드 실패: {str(e)}")
+            raise InvalidImageException(f"파일 이미지 로드 실패: {str(e)}") from e
 
     def _validate_image(self, image: Image.Image):
         """
@@ -433,7 +433,7 @@ class PredictionService:
             try:
                 image = image.convert('RGB')
             except Exception:
-                raise InvalidImageException("지원하지 않는 이미지 색상 모드입니다")
+                raise InvalidImageException("지원하지 않는 이미지 색상 모드입니다") from None
 
     async def _get_file_info(self, file: UploadFile, image: Image.Image) -> FileInfo:
         """

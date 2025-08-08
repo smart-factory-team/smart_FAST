@@ -67,7 +67,7 @@ async def get_model_info(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
 
 
 @router.get("/classes")
@@ -107,7 +107,7 @@ async def get_model_classes(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
 
 
 @router.get("/performance")
@@ -148,7 +148,7 @@ async def get_model_performance(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
 
 
 @router.post("/reload")
@@ -193,4 +193,4 @@ async def reload_model(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e

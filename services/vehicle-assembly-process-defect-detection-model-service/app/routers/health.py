@@ -71,7 +71,7 @@ async def readiness_check(
                 "timestamp": datetime.now().isoformat(),
                 "request_id": request_id
             }
-        )
+        ) from e
 
     return ReadinessResponse(
         success=True,
@@ -155,7 +155,7 @@ async def startup_check(request_id: str = Depends(get_request_id)):
                 "timestamp": datetime.now().isoformat(),
                 "request_id": request_id
             }
-        )
+        ) from e
 
     return StartupResponse(
         success=True,

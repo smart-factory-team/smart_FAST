@@ -77,7 +77,7 @@ async def predict(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
     except Exception as e:
         logger.error(f"예측 중 오류 발생 - Request ID: {request_id}, 오류: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -88,7 +88,7 @@ async def predict(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
 
 
 @router.post("/file", response_model=FilePredictResponse)
@@ -158,7 +158,7 @@ async def predict_file(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
     except Exception as e:
         logger.error(f"파일 예측 중 오류 발생 - Request ID: {request_id}, 오류: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -169,7 +169,7 @@ async def predict_file(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
 
 
 @router.post("/batch", response_model=BatchPredictResponse)
@@ -237,4 +237,4 @@ async def predict_batch(
                 "request_id": request_id,
                 "timestamp": datetime.now().isoformat()
             }
-        )
+        ) from e
