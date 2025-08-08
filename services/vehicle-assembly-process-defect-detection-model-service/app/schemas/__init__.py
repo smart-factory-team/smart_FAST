@@ -161,9 +161,12 @@ __all__ = [
     "ProcessingTime",
     "DefectCategory",
     "IssueCode",
+    "HealthStatus",
+    "ModelStatus",
     "ProcessType",
     "PartType",
     "DefectType",
+    "DEFECT_CATEGORIES",
 
     # 서비스 정보
     "ServiceInfoResponse",

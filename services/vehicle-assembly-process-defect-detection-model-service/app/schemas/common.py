@@ -138,25 +138,6 @@ class QualityType(str, Enum):
     DEFECT = "불량"        # 불량
 
 
-class DefectCategory(BaseModel):
-    """불량 카테고리 정보 (실제 라벨링 데이터 기반)"""
-    id: int = Field(..., description="카테고리 ID")
-    name: str = Field(..., description="불량 이름")
-    supercategory: str = Field(..., description="상위 카테고리")
-    description: Optional[str] = Field(None, description="불량 설명")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": 101,
-                "name": "스크래치",
-                "supercategory": "자동차부품품질",
-                "severity": "medium",
-                "description": "부품 표면의 긁힘 현상"
-            }
-        }
-
-
 class DefectAttributes(BaseModel):
     """불량 속성 정보"""
     work: WorkType = Field(..., description="작업 분류")
