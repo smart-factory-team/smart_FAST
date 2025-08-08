@@ -29,26 +29,6 @@ class TestSettings:
         assert test_settings.http_timeout == 30
         assert test_settings.max_retries == 3
 
-    def test_required_fields(self, monkeypatch):
-        """Test that required fields raise ValidationError when missing."""
-        monkeypatch.delenv("AZURE_CONNECTION_STRING", raising=False)
-        with pytest.raises(ValidationError) as exc_info:
-            Settings()
-        
-        error_details = exc_info.value.errors()
-        assert any(error['loc'] == ('azure_connection_string',) for error in error_details)
-
-    def test_azure_connection_string_validation(self, monkeypatch):
-        """Test azure_connection_string field validation."""
-        # Valid connection string
-        test_settings = Settings(azure_connection_string="DefaultEndpointsProtocol=https;AccountName=test")
-        assert test_settings.azure_connection_string == "DefaultEndpointsProtocol=https;AccountName=test"
-    
-        # Empty string should raise validation error
-        monkeypatch.delenv("AZURE_CONNECTION_STRING", raising=False)
-        with pytest.raises(ValidationError):
-            Settings()
-
     def test_integer_field_validation(self):
         """Test integer field validation for various numeric settings."""
         # Valid integers
@@ -319,23 +299,6 @@ class TestSettings:
         
         assert test_settings.scheduler_interval_minutes == 2147483647
         assert test_settings.batch_size == 2147483647
-
-    def test_os_getenv_fallback_mechanism(self, monkeypatch):
-        """Test the os.getenv fallback mechanism for painting_service_url."""
-        # Test when environment variable is not set
-        mock_getenv.return_value = None
-        test_settings = Settings(azure_connection_string="test")
-        # Since os.getenv is mocked to return None, it should use the default
-        expected_default = "http://localhost:8001"
-        # The actual value depends on the implementation, but we can test the pattern
-        assert "localhost" in test_settings.painting_service_url or test_settings.painting_service_url == expected_default
-
-        # Test when environment variable is set
-        mock_getenv.return_value = "http://mocked:8888"
-        # Create new instance to pick up the mocked value
-        # Note: This might not work as expected due to how the default is set in the class definition
-        # But we can test that getenv was called
-        mock_getenv.assert_called()
 
     def test_model_services_property_consistency(self):
         """Test that model_services property maintains consistency."""

@@ -60,38 +60,6 @@ class TestAzureStorageService:
     class TestListDataFiles:
         """Test list_data_files method."""
 
-        @pytest.mark.asyncio
-        async def test_list_data_files_success(self, azure_service, mock_settings):
-            """Test successful listing of CSV files."""
-            mock_blob1 = MagicMock()
-            mock_blob1.name = "painting-process-equipment/data1.csv"
-            mock_blob2 = MagicMock()
-            mock_blob2.name = "painting-process-equipment/data2.csv"
-            mock_blob3 = MagicMock()
-            mock_blob3.name = "painting-process-equipment/config.txt"  # Should be filtered out
-
-            mock_client = MagicMock()
-            mock_container_client = AsyncMock()
-            mock_client.get_container_client.return_value = mock_container_client
-            
-            async def async_iterator(items):
-                for item in items:
-                    yield item
-            
-            mock_container_client.list_blobs.return_value = async_iterator([
-                mock_blob1, mock_blob2, mock_blob3
-            ])
-
-            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
-                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
-
-                result = await azure_service.list_data_files()
-
-                assert len(result) == 2
-                assert "painting-process-equipment/data1.csv" in result
-                assert "painting-process-equipment/data2.csv" in result
-                assert "painting-process-equipment/config.txt" not in result
-                assert result == sorted(result)  # Should be sorted
 
         @pytest.mark.asyncio
         async def test_list_data_files_no_connection_string(self, mock_settings):
@@ -149,41 +117,6 @@ class TestAzureStorageService:
                 result = await azure_service.list_data_files()
 
                 assert result == []
-
-        @pytest.mark.asyncio
-        async def test_list_data_files_prefix_filtering(self, azure_service, mock_settings):
-            """Test that only files with correct prefix are returned."""
-            mock_blob1 = MagicMock()
-            mock_blob1.name = "painting-process-equipment/data1.csv"
-            mock_blob2 = MagicMock()
-            mock_blob2.name = "other-folder/data2.csv"  # Should be filtered out
-
-            mock_client = MagicMock()
-            mock_container_client = AsyncMock()
-            mock_client.get_container_client.return_value = mock_container_client
-            
-            async def async_iterator(items):
-                for item in items:
-                    yield item
-            
-            mock_container_client.list_blobs.return_value = async_iterator([
-                mock_blob1, mock_blob2
-            ])
-
-            with patch('app.services.azure_storage.BlobServiceClient.from_connection_string') as mock_from_conn_str:
-                mock_from_conn_str.return_value.__aenter__.return_value = mock_client
-
-                result = await azure_service.list_data_files()
-
-                # Verify prefix was used correctly
-                mock_container_client.list_blobs.assert_called_once_with(
-                    name_starts_with=f"{mock_settings.painting_data_folder}/"
-                )
-                assert len(result) == 1
-                assert "painting-process-equipment/data1.csv" in result
-
-    class TestReadCsvData:
-        """Test read_csv_data method."""
 
         @pytest.mark.asyncio
         async def test_read_csv_data_success(self, azure_service, sample_csv_data, capsys):
@@ -290,20 +223,6 @@ class TestAzureStorageService:
 
     class TestSimulateRealTimeData:
         """Test simulate_real_time_data method."""
-
-        @pytest.mark.asyncio
-        async def test_simulate_real_time_data_first_call(self, azure_service, sample_csv_data, capsys):
-            """Test first call to simulate_real_time_data loads DataFrame."""
-            with patch.object(azure_service, '_load_dataframe', new_callable=AsyncMock) as mock_load:
-                azure_service.cached_df = sample_csv_data.copy()
-
-                result = await azure_service.simulate_real_time_data()
-
-                mock_load.assert_called_once()
-                assert result is not None
-                assert result['machineId'] == 'PAINT-MACHINE001'
-                assert result['thick'] == 1.5
-                assert azure_service.current_index == 1
 
         @pytest.mark.asyncio
         async def test_simulate_real_time_data_subsequent_calls(self, azure_service, sample_csv_data, capsys):

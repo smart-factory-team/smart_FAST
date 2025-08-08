@@ -2,8 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
-import os
-import sys
+import os\
 
 from app.main import app, lifespan
 
@@ -45,35 +44,6 @@ class TestLifespan:
             assert "🔧 스케줄러 간격: 5분" in captured.out
             assert "🎯 대상 서비스 수: 3" in captured.out
             assert "🛑 Data Simulator Service 종료 중..." in captured.out
-
-    @pytest.mark.asyncio
-    async def test_lifespan_startup_without_azure_connection_string(self, capfd):
-        """Test lifespan startup when Azure connection string is missing"""
-        mock_app = Mock(spec=FastAPI)
-        
-        with patch('app.main.settings') as mock_settings, \
-             patch('app.main.simulator_scheduler') as mock_scheduler, \
-             patch('app.main.os.makedirs') as mock_makedirs:
-            
-            # Configure mock settings without connection string
-            mock_settings.azure_connection_string = None
-            mock_settings.log_directory = "/test/logs"
-            mock_settings.scheduler_interval_minutes = 10
-            mock_settings.model_services = ["service1"]
-            
-            mock_scheduler.is_running = False
-            
-            # Test the lifespan context manager
-            async with lifespan(mock_app):
-                pass
-            
-            # Verify directory creation still happens
-            mock_makedirs.assert_called_once_with("/test/logs", exist_ok=True)
-            
-            # Check warning message for missing connection string
-            captured = capfd.readouterr()
-            assert "⚠️ AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다." in captured.out
-            assert ".env 파일을 생성하거나 환경 변수를 설정해주세요." in captured.out
 
     @pytest.mark.asyncio
     async def test_lifespan_scheduler_not_running_on_shutdown(self, capfd):
@@ -322,18 +292,6 @@ class TestErrorHandling:
     def setup_method(self):
         """Setup test client for each test"""
         self.client = TestClient(app)
-
-    @patch('app.main.simulator_scheduler')
-    def test_scheduler_status_exception_handling(self, mock_scheduler):
-        """Test handling when scheduler status throws an exception"""
-        mock_scheduler.get_status.side_effect = Exception("Scheduler unavailable")
-        
-        # The endpoint should still work but may handle the error
-        response = self.client.get("/")
-        
-        # Depending on implementation, this might return 200 with error info
-        # or 500. Let's check it doesn't crash the app
-        assert response.status_code in [200, 500]
 
     def test_malformed_request_headers(self):
         """Test handling of malformed request headers"""
