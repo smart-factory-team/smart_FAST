@@ -540,7 +540,7 @@ def analyze_log_file(log_file_path: str, hours: int = 24) -> Dict[str, Any]:
                 "median": statistics.median(proc_times),
                 "min": min(proc_times),
                 "max": max(proc_times),
-                "p95": statistics.quantiles(proc_times, n=20)[18] if len(proc_times) > 20 else max(proc_times)
+                "p95": statistics.quantiles(proc_times, n=100)[94] if len(proc_times) > 20 else max(proc_times)
             }
 
         return stats
