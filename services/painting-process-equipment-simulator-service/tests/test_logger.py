@@ -2,7 +2,7 @@ import json
 import os
 import tempfile
 import pytest
-from unittest.mock import patch, mock_open, call, ANY
+from unittest.mock import patch, mock_open, call
 import shutil
 
 # Import the logger module from the correct path
@@ -135,7 +135,7 @@ class TestAnomalyLogger:
     @patch('builtins.open', new_callable=mock_open)
     def test_log_error_without_original_data(self, mock_file, mock_print, mock_datetime):
         """Test log_error works when original_data is None."""
-        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
+        mock_datetime.now.return_value.isoformat.return_value = "2023-12-01T10:30:00.123456"
 
         service_name = "TestService"
         error_message = "Invalid configuration"
@@ -198,7 +198,7 @@ class TestAnomalyLogger:
     @patch('builtins.open', new_callable=mock_open)
     def test_json_serialization_with_complex_data_types(self, mock_file, mock_datetime):
         """Test JSON serialization handles complex data types correctly."""
-        mock_datetime.now.return_value.isoformat.return_value = "a-fixed-iso-timestamp"
+        mock_datetime.now.return_value.isoformat.return_value = "2023-12-01T10:30:00.123456"
 
         # Test with nested dictionaries and lists
         service_name = "TestService"

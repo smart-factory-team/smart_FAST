@@ -1,7 +1,6 @@
 import pytest
 import pandas as pd
 from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
 
 from app.services.azure_storage import AzureStorageService
 
@@ -346,8 +345,8 @@ class TestAzureStorageService:
             """Test successful DataFrame loading."""
             mock_files = ["painting-process-equipment/data1.csv", "painting-process-equipment/data2.csv"]
             
-            with patch.object(azure_service, 'list_data_files', return_value=mock_files), \
-                 patch.object(azure_service, 'read_csv_data', return_value=sample_csv_data):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=mock_files)), \
+                patch.object(azure_service, 'read_csv_data', new=AsyncMock(return_value=sample_csv_data)):
 
                 await azure_service._load_dataframe()
 
@@ -361,7 +360,7 @@ class TestAzureStorageService:
         @pytest.mark.asyncio
         async def test_load_dataframe_no_files(self, azure_service, capsys):
             """Test behavior when no files are found."""
-            with patch.object(azure_service, 'list_data_files', return_value=[]):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=[])):
                 await azure_service._load_dataframe()
 
                 assert azure_service.cached_df is None
@@ -373,8 +372,8 @@ class TestAzureStorageService:
             """Test behavior when CSV reading fails."""
             mock_files = ["painting-process-equipment/data1.csv"]
             
-            with patch.object(azure_service, 'list_data_files', return_value=mock_files), \
-                 patch.object(azure_service, 'read_csv_data', return_value=None):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=mock_files)), \
+                patch.object(azure_service, 'read_csv_data', new=AsyncMock(return_value=None)):
 
                 await azure_service._load_dataframe()
 
@@ -386,8 +385,8 @@ class TestAzureStorageService:
             """Test that _load_dataframe uses the first available file."""
             mock_files = ["painting-process-equipment/data1.csv", "painting-process-equipment/data2.csv"]
             
-            with patch.object(azure_service, 'list_data_files', return_value=mock_files), \
-                 patch.object(azure_service, 'read_csv_data', return_value=sample_csv_data) as mock_read:
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=mock_files)), \
+                patch.object(azure_service, 'read_csv_data', new=AsyncMock(return_value=sample_csv_data)) as mock_read:
 
                 await azure_service._load_dataframe()
 
@@ -396,7 +395,7 @@ class TestAzureStorageService:
         @pytest.mark.asyncio
         async def test_load_dataframe_exception_handling(self, azure_service, capsys):
             """Test exception handling in _load_dataframe."""
-            with patch.object(azure_service, 'list_data_files', side_effect=Exception("List failed")):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(side_effect=Exception("List failed"))):
                 await azure_service._load_dataframe()
 
                 captured = capsys.readouterr()
@@ -491,8 +490,8 @@ class TestAzureStorageService:
             """Test complete workflow from listing files to data simulation."""
             mock_files = ["painting-process-equipment/data1.csv"]
             
-            with patch.object(azure_service, 'list_data_files', return_value=mock_files), \
-                 patch.object(azure_service, 'read_csv_data', return_value=sample_csv_data):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=mock_files)), \
+                patch.object(azure_service, 'read_csv_data', new=AsyncMock(return_value=sample_csv_data)):
 
                 # First simulate call should trigger loading
                 result1 = await azure_service.simulate_real_time_data()
@@ -518,14 +517,14 @@ class TestAzureStorageService:
         async def test_error_recovery_workflow(self, azure_service, sample_csv_data):
             """Test error recovery in complete workflow."""
             # First attempt fails
-            with patch.object(azure_service, 'list_data_files', side_effect=Exception("Network error")):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(side_effect=Exception("Network error"))):
                 result1 = await azure_service.simulate_real_time_data()
                 assert result1 is None
 
             # Second attempt succeeds
             mock_files = ["painting-process-equipment/data1.csv"]
-            with patch.object(azure_service, 'list_data_files', return_value=mock_files), \
-                 patch.object(azure_service, 'read_csv_data', return_value=sample_csv_data):
+            with patch.object(azure_service, 'list_data_files', new=AsyncMock(return_value=mock_files)), \
+                patch.object(azure_service, 'read_csv_data', new=AsyncMock(return_value=sample_csv_data)):
                 
                 result2 = await azure_service.simulate_real_time_data()
                 assert result2 is not None
@@ -559,7 +558,3 @@ class TestGlobalInstance:
         
         # Reset for other tests
         azure_storage.current_index = original_index
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

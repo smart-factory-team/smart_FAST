@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
-import os\
+import os
 
 from app.main import app, lifespan
 
@@ -339,7 +339,3 @@ class TestEnvironmentVariableHandling:
         client = TestClient(app)
         response = client.get("/health")
         assert response.status_code == 200
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
