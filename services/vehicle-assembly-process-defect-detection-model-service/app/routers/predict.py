@@ -129,8 +129,25 @@ async def predict_file(
             )
 
         # 파일 크기 확인
-        if file.size and file.size > settings.MAX_IMAGE_SIZE:
+        if file.size is not None and file.size > settings.MAX_IMAGE_SIZE:
             raise ImageSizeException(file.size, settings.MAX_IMAGE_SIZE)
+        elif file.size is None:
+            # 스트리밍으로 크기만 확인 (메모리 효율적)
+            total_size = 0
+            chunk_size = 8192
+            chunks = []
+
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > settings.MAX_IMAGE_SIZE:
+                    raise ImageSizeException(total_size, settings.MAX_IMAGE_SIZE)
+                chunks.append(chunk)
+
+            # 파일 내용 복원
+            await file.seek(0)
 
         # 예측 수행
         result = await prediction_service.predict_from_file(file)
