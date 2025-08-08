@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, validator
 from typing import Optional, Dict, List, Union
 from datetime import datetime
 import re
@@ -15,20 +15,19 @@ from app.schemas.common import (
 
 
 class ImageData(BaseModel):
-    """이미지 데이터 모델"""
-    url: HttpUrl = Field(..., description="이미지 URL")
+    """이미지 데이터 모델 (Base64 인코딩)"""
+    base64_data: str = Field(..., description="Base64 인코딩된 이미지 데이터")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "url": "https://example.com/image.jpg"
+                "base64_data": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/..."
             }
         }
 
-
 class PredictRequest(BaseModel):
     """AI 모델 예측 요청 (POST /predict)"""
-    image: ImageData = Field(..., description="이미지 데이터")
+    image: ImageData = Field(..., description="Base64 인코딩된 이미지 데이터")
     options: Optional[Dict[str, Union[str, int, float, bool]]] = Field(
         default_factory=dict,
         description="예측 옵션"
@@ -38,7 +37,7 @@ class PredictRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "image": {
-                    "url": "https://example.com/sample-image.jpg"
+                    "base64_data": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAAcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABkAGQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD..."
                 },
                 "options": {
                     "confidence_threshold": 0.8,

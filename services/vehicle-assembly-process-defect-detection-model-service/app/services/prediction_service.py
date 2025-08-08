@@ -7,7 +7,6 @@ AI 모델을 사용한 이미지 불량 예측 기능을 제공합니다.
 - 배치 예측
 - 이미지 전처리 및 검증
 """
-
 import asyncio
 import io
 import time
@@ -17,6 +16,7 @@ import logging
 from datetime import datetime
 
 import aiohttp
+import base64
 from fastapi import UploadFile
 from PIL import Image
 
@@ -311,62 +311,72 @@ class PredictionService:
 
     async def _load_image_from_request(self, image_data) -> Image.Image:
         """
-        요청 데이터에서 이미지 로드 (URL만 지원)
+        요청 데이터에서 이미지 로드 (Base64만 지원)
 
         Args:
-            image_data: 이미지 데이터 (URL)
+            image_data: 이미지 데이터 (base64 인코딩된 문자열)
 
         Returns:
             Image.Image: PIL 이미지 객체
         """
-        if image_data.url:
-            return await self._load_image_from_url(str(image_data.url))
+        if hasattr(image_data, 'base64_data') and image_data.base64_data:
+            return await self._load_image_from_base64(image_data.base64_data)
+        elif isinstance(image_data, str):
+            # 직접 base64 문자열이 전달된 경우
+            return await self._load_image_from_base64(image_data)
         else:
-            raise InvalidImageException("이미지 URL이 제공되지 않았습니다")
+            raise InvalidImageException("Base64 인코딩된 이미지 데이터가 제공되지 않았습니다")
 
-    async def _load_image_from_url(self, url: str) -> Image.Image:
+    async def _load_image_from_base64(self, base64_data: str) -> Image.Image:
         """
-        URL에서 이미지 로드
+        Base64 인코딩된 데이터에서 이미지 로드
 
         Args:
-            url: 이미지 URL
+            base64_data: Base64 인코딩된 이미지 데이터
 
         Returns:
             Image.Image: PIL 이미지 객체
         """
         try:
-            timeout = aiohttp.ClientTimeout(total=10)  # 10초 타임아웃
+            # data:image/jpeg;base64, 같은 접두사가 있는 경우 제거
+            if base64_data.startswith('data:'):
+                # data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAA... 형태에서 실제 데이터만 추출
+                base64_data = base64_data.split(',', 1)[1]
 
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        raise InvalidImageException(
-                            f"이미지 다운로드 실패: HTTP {response.status}"
-                        )
+            # Base64 디코딩
+            try:
+                image_bytes = base64.b64decode(base64_data)
+            except Exception as e:
+                raise InvalidImageException(f"Base64 디코딩 실패: {str(e)}") from e
 
-                    # Content-Length 확인
-                    content_length = response.headers.get('Content-Length')
-                    if content_length and int(content_length) > self.max_image_size:
-                        raise ImageSizeException(int(content_length), self.max_image_size)
+            # 이미지 크기 확인
+            if len(image_bytes) > self.max_image_size:
+                raise ImageSizeException(len(image_bytes), self.max_image_size)
 
-                    # 이미지 데이터 읽기
-                    image_data = await response.read()
+            # PIL 이미지로 변환
+            try:
+                image = Image.open(io.BytesIO(image_bytes))
 
-                    # 크기 재확인
-                    if len(image_data) > self.max_image_size:
-                        raise ImageSizeException(len(image_data), self.max_image_size)
+                # 이미지 유효성 검증 (이미지가 손상되었는지 확인)
+                image.verify()
 
-                    # PIL 이미지로 변환
-                    image = Image.open(io.BytesIO(image_data))
+                # verify() 호출 후에는 이미지 객체가 손상되므로 다시 생성
+                image = Image.open(io.BytesIO(image_bytes))
 
-                    return image
+                return image
 
-        except aiohttp.ClientError as e:
-            self.logger.error(f"URL 이미지 로드 실패: {e}")
-            raise InvalidImageException(f"URL 이미지 로드 실패: {str(e)}") from e
+            except Exception as e:
+                raise InvalidImageException(f"이미지 파일 형식이 올바르지 않습니다: {str(e)}") from e
+
+        except InvalidImageException:
+            # 이미 처리된 예외는 다시 발생
+            raise
+        except ImageSizeException:
+            # 이미 처리된 예외는 다시 발생
+            raise
         except Exception as e:
-            self.logger.error(f"URL 이미지 처리 실패: {e}")
-            raise InvalidImageException(f"URL 이미지 처리 실패: {str(e)}") from e
+            self.logger.error(f"Base64 이미지 처리 실패: {e}")
+            raise InvalidImageException(f"Base64 이미지 처리 실패: {str(e)}") from e
 
     async def _load_image_from_file(self, file: UploadFile) -> Image.Image:
         """
