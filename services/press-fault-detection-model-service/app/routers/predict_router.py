@@ -50,8 +50,6 @@ async def predict_fault_from_file(file: UploadFile = File(...)):
                 detail=f"CSV 파일에 필요한 컬럼이 없습니다: {missing_columns}"
             )
         
-        logger.info("CSV to DF")
-        
         # DataFrame을 SensorData로 변환
         sensor_data = SensorData(
             AI0_Vibration=df['AI0_Vibration'].tolist(),
@@ -59,11 +57,8 @@ async def predict_fault_from_file(file: UploadFile = File(...)):
             AI2_Current=df['AI2_Current'].tolist()
         )
         
-        logger.info("DataFrame to SensorData")
-        
         # 기존 predict 함수 사용
         result = predict(data=sensor_data)
-        logger.info("predict")
         return PredictionResponse(**result)
         
     except UnicodeDecodeError as e:
