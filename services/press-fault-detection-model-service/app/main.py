@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app.core.model_cache import model_cache
 from contextlib import asynccontextmanager
 from app.models.model_loader import load_all
-from app.routers import predict_router
+from app.routers import predict_router, model_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,10 +32,36 @@ app = FastAPI(
 )
 
 @app.get("/", tags=["Root"])
-async def root():
-    return {"message": "Hello World"}
+async def service_info():
+    """
+    프레스 공정의 유압 펌프 고장 탐지 모델 서비스 정보 조회
+    """
+    return {
+        "service": "Press Fault Detection Model Service",
+        "version": "1.0.0",
+        "status": "running",
+        "description": "프레스 장비 고장 탐지 AI 서비스",
+        
+        "api": {
+            "docs": "/docs",
+            "predict": "/predict",
+            "predict_file": "/predict/file", 
+            "model_info": "/model/info",
+            "health": "/health",
+            "ready": "/ready",
+            "start": "/startup"
+        },
+        
+        "features": [
+            "센서 데이터 기반 고장 예측",
+            "이미지/파일 업로드 지원", 
+            "실시간 예측 API",
+            "모델 정보 조회"
+        ]
+    }
 
 app.include_router(predict_router.router)
+app.include_router(model_router.router)
 
 @app.get("/health")
 async def health():
