@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Dict, Optional
 
+
 class PredictionResponse(BaseModel):
     prediction: str
     reconstruction_error: Optional[float]
