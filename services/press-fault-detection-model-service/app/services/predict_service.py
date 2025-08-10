@@ -3,7 +3,6 @@ import logging
 
 from app.core.model_cache import model_cache
 from app.schemas.input import SensorData, SEQUENCE_LENGTH
-from numpy.lib.stride_tricks import as_strided
 
 logger = logging.getLogger(__name__)
 FEATURE_NAMES = ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]
@@ -42,51 +41,60 @@ def predict_press_fault(data: SensorData) -> dict:
 
         # 4. 시퀀스 데이터 생성
         sequences = create_sequences(scaler_data, SEQUENCE_LENGTH)
+
         if len(sequences) == 0:
             raise ValueError(
                 f"입력 데이터 길이({len(scaler_data)})가 시퀀스 길이 ({SEQUENCE_LENGTH})보다 짧아 예측을 수행할 수 없습니다."
             )
 
         # 5. 예측, 복원 오차 계산
-        reconstructed_sequence = model.predict(sequences)
+        reconstructed_sequences = model.predict(sequences)
 
-        # 6-1. 속성별 제곱 오차 계산 (아직 평균 내지 않음)
-        # 이 시점에서 per_feature_squared_errors는 (N, 3) 형태의 배열
-        # 각 행은 시퀀스, 각 열은 속성(피처)의 제곱 오차
+        # 6-1. 시퀀스별 MSE 오차 계산
         original_last_steps = flatten(sequences)
-        reconstructed_last_steps = flatten(reconstructed_sequence)
+        reconstructed_last_steps = flatten(reconstructed_sequences)
         per_feature_squared_errors = np.power(
             reconstructed_last_steps - original_last_steps, 2
         )
-
-        # 6-2. 기존 방식대로 시퀀스별 최종 오차 계산 (속성들을 평균)
+        # 각 시퀀스 별 최종 오차 (MSE) 배열
         errors = np.mean(per_feature_squared_errors, axis=1)
 
-        # 7. 최종 고장 여부 판정
-        max_error = np.max(errors)
-        is_fault = max_error > threshold
+        # 7. 고장 비율 계산 (Probability)
+        total_sequences = len(errors)
+        # 오차(error)가 임곗값(thresshold)을 초과하는 시퀀스의 개수
+        faulty_sequence_count = np.sum(errors > threshold)
+
+        # 0으로 나누는 것을 방지
+        fault_probability = (
+            (faulty_sequence_count / total_sequences) if total_sequences > 0 else 0.0
+        )
+
+        # 8. 최종 판정
+        is_fault = fault_probability > 0.05
         prediction_result = "고장" if is_fault else "정상"
 
-        # 8. 고장일 경우, 원인 분석
+        max_error = np.max(errors) if total_sequences > 0 else 0.0
+
+        # 9. 원인 분석 (확률이 일정 수준 이상일 때만)
         attribute_errors_dict = None
         if is_fault:
-            # 가장 큰 오차를 발생시킨 시퀀스의 인덱스 찾기
             worst_sequence_index = np.argmax(errors)
-
-            # 해당 시퀀스의 속성별 오차 값
             faulty_attribute_errors = per_feature_squared_errors[worst_sequence_index]
-
-            # 속성 이름과 오차 값을 딕셔너리로 매핑
             attribute_errors_dict = dict(
                 zip(FEATURE_NAMES, faulty_attribute_errors.astype(float))
             )
 
-        return {
+        # 10. 최종 응답 데이터 구성
+        response_data = {
             "prediction": prediction_result,
             "reconstruction_error": float(max_error),
             "is_fault": is_fault,
+            "fault_probability": float(fault_probability),  # 계산된 확률 추가
             "attribute_errors": attribute_errors_dict,
         }
+
+        return response_data
+
     except Exception as e:
         logger.error(f"예측 서비스 실행 중 예외 발생: {e}", exc_info=True)
         raise e
