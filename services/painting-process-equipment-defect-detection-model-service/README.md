@@ -3,7 +3,7 @@
 ## 1. 서비스 소개
 이 서비스는 E-coating 공정에서 발생하는 데이터를 분석하여 잠재적인 문제를 예측하고, 문제 발생 시 원인을 파악하여 로그를 생성하는 FastAPI 기반의 AI 서비스입니다.
 
-## 2. 프로젝트 구조
+## 2. 프로젝트 구조 
 
 ```text
 painting-process-equipment-defect-detection-model-service/
