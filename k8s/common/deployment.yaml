@@ -77,14 +77,16 @@ spec:
           #   value: "30"
 
           # AI 모델 설정 (AI 서비스용)
-          # - name: MODEL_CACHE_DIR
-          #   value: "/tmp/models"
-          # - name: HF_HOME
-          #   value: "/tmp/cache"
-          # - name: TRANSFORMERS_CACHE
-          #   value: "/tmp/cache/transformers"
-          # - name: TOKENIZER_PARALLELISM
-          #   value: "false"
+            - name: MODEL_CACHE_DIR
+              value: "/tmp/models"
+            - name: HF_HOME
+              value: "/tmp/cache"
+            - name: TRANSFORMERS_CACHE
+              value: "/tmp/cache/transformers"
+            - name: HF_DATASETS_CACHE
+              value: "/tmp/cache/datasets"
+            - name: TOKENIZER_PARALLELISM
+              value: "false"
 
           # 외부 API 키들
           # - name: OPENAI_API_KEY
