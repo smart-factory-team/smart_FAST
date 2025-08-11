@@ -150,9 +150,13 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics > flake8-results.txt 2>&1 || true
-          LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt || echo "0")
-          echo "lint_errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
-          echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
+          LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt 2>/dev/null || echo "0")
+          
+          # 안전하게 output 쓰기
+          {
+            echo "lint_errors=${LINT_ERRORS}"
+            echo "service_name=${{ matrix.service }}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Run tests with coverage - ${{ matrix.service }}
         id: test
@@ -443,8 +447,63 @@ jobs:
           export IMAGE_TAG="${{ github.sha }}"
           export REGISTRY="${{ env.REGISTRY }}"
           export IMAGE_FULL_NAME="${{ env.REGISTRY }}/smart-fast-${{ matrix.service }}:${{ github.sha }}"
+          export AZURE_CONNECTION_STRING="${{ secrets.AZURE_CONNECTION_STRING }}" 
 
-          echo "🚀 Deploying ${{ matrix.service }} with minimal setup"
+          case "${{ matrix.service }}" in
+            "painting-process-equipment-defect-detection-model-service")
+              export SERVICE_PORT="8001"
+              ;; 
+
+            "painting-surface-defect-detection-model-service")
+              export SERVICE_PORT="8002"
+              ;; 
+            
+            "press-defect-detection-model-service")
+              export SERVICE_PORT="8003"
+              ;; 
+
+            "press-fault-detection-model-service")
+              export SERVICE_PORT="8004"
+              ;; 
+
+            "vehicle-assembly-process-defect-detection-model-service")
+              export SERVICE_PORT="8005"
+              ;; 
+
+            "welding-machine-defect-detection-model-service")
+              export SERVICE_PORT="8006"
+              ;; 
+
+            "welding-machine-data-simulator-service")
+              export SERVICE_PORT="8016"
+              ;; 
+
+            "vehicle-assembly-data-simulator-service")
+              export SERVICE_PORT="8015"
+              ;; 
+
+            "press-fault-data-simulator-service")
+              export SERVICE_PORT="8014"
+              ;; 
+
+            "press-defect-data-simulator-service")
+              export SERVICE_PORT="8013"
+              ;; 
+
+            "painting-surface-data-simulator-service")
+              export SERVICE_PORT="8012"
+              ;; 
+
+            "painting-process-data-simulator-service")
+              export SERVICE_PORT="8011"
+              ;; 
+
+             *)
+              export SERVICE_PORT="8000"  # 기본값
+              ;;
+          esac
+
+          echo "🚀 Deploying ${{ matrix.service }} on port $SERVICE_PORT with minimal setup"
 
           # 순차적으로 배포 (의존성 고려)
           echo "📦 Creating namespace..."
@@ -464,10 +523,10 @@ jobs:
 
           # 배포 상태 확인
           echo "⏳ Waiting for deployment to be ready..."
-          kubectl rollout status deployment/smart-fast-${{ matrix.service }} -n smart-fast-${{ matrix.service }} --timeout=300s
+          kubectl rollout status deployment/sf-${{ matrix.service }} -n sf-${{ matrix.service }} --timeout=300s
 
           # 배포 결과 확인
-          POD_STATUS=$(kubectl get pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+          POD_STATUS=$(kubectl get pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
           if [ "$POD_STATUS" = "Running" ]; then
             echo "✅ ${{ matrix.service }} deployed successfully!"
 
@@ -481,7 +540,7 @@ jobs:
             fi
           else
             echo "⚠️ Deployment may have issues. Pod status: $POD_STATUS"
-            kubectl describe pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }}
+            kubectl describe pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }}
           fi
   # Pull Request 자동 리뷰 (모든 검사 완료 후)
   auto-review:
