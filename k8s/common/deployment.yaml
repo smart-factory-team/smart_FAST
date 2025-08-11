@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: smart-fast-${SERVICE_NAME}
-  namespace: smart-fast-${SERVICE_NAME}
+  name: sf-${SERVICE_NAME}
+  namespace: sf-${SERVICE_NAME}
   labels:
-    app: smart-fast-${SERVICE_NAME}
+    app: sf-${SERVICE_NAME}
     service: ${SERVICE_NAME}
 spec:
   replicas: 2
@@ -15,11 +15,11 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: smart-fast-${SERVICE_NAME}
+      app: sf-${SERVICE_NAME}
   template:
     metadata:
       labels:
-        app: smart-fast-${SERVICE_NAME}
+        app: sf-${SERVICE_NAME}
         service: ${SERVICE_NAME}
     spec:
       containers:
