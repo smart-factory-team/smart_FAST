@@ -150,9 +150,13 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics > flake8-results.txt 2>&1 || true
-          LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt || echo "0")
-          echo "lint_errors=$LINT_ERRORS" >> $GITHUB_OUTPUT
-          echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
+          LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt 2>/dev/null || echo "0")
+          
+          # 안전하게 output 쓰기
+          {
+            echo "lint_errors=${LINT_ERRORS}"
+            echo "service_name=${{ matrix.service }}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Run tests with coverage - ${{ matrix.service }}
         id: test
@@ -464,10 +468,10 @@ jobs:
 
           # 배포 상태 확인
           echo "⏳ Waiting for deployment to be ready..."
-          kubectl rollout status deployment/smart-fast-${{ matrix.service }} -n smart-fast-${{ matrix.service }} --timeout=300s
+          kubectl rollout status deployment/sf-${{ matrix.service }} -n sf-${{ matrix.service }} --timeout=300s
 
           # 배포 결과 확인
-          POD_STATUS=$(kubectl get pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+          POD_STATUS=$(kubectl get pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
           if [ "$POD_STATUS" = "Running" ]; then
             echo "✅ ${{ matrix.service }} deployed successfully!"
 
@@ -481,7 +485,7 @@ jobs:
             fi
           else
             echo "⚠️ Deployment may have issues. Pod status: $POD_STATUS"
-            kubectl describe pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }}
+            kubectl describe pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }}
           fi
   # Pull Request 자동 리뷰 (모든 검사 완료 후)
   auto-review:
