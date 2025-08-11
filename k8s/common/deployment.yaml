@@ -97,7 +97,7 @@ spec:
             requests:
               memory: "128Mi"     # 256Mi → 128Mi
               cpu: "100m"         # 250m → 100m  
-              ephemtml:storage: "256Mi"  # 1Gi → 256Mi
+              ephemeral-storage: "256Mi"  # 1Gi → 256Mi
             limits:
               memory: "512Mi"     # 1Gi → 512Mi
               cpu: "200m"         # 500m → 200m
