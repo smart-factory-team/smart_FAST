@@ -3,6 +3,7 @@ import logging
 
 from app.core.model_cache import model_cache
 from app.schemas.input import SensorData, SEQUENCE_LENGTH
+from numpy.lib.stride_tricks import as_strided
 
 logger = logging.getLogger(__name__)
 FEATURE_NAMES = ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]
