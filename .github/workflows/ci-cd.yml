@@ -447,6 +447,7 @@ jobs:
           export IMAGE_TAG="${{ github.sha }}"
           export REGISTRY="${{ env.REGISTRY }}"
           export IMAGE_FULL_NAME="${{ env.REGISTRY }}/smart-fast-${{ matrix.service }}:${{ github.sha }}"
+          export AZURE_CONNECTION_STRING="${{ secrets.AZURE_CONNECTION_STRING }}" 
 
           case "${{ matrix.service }}" in
             "painting-process-equipment-defect-detection-model-service")

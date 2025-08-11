@@ -42,6 +42,8 @@ spec:
               value: "INFO"
             - name: DEBUG
               value: "false"
+            - name: AZURE_CONNECTION_STRING
+              value: "${AZURE_CONNECTION_STRING}"  
 
           # 필요시 주석 해제하여 사용
           # 데이터베이스 설정
