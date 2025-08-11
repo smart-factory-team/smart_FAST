@@ -26,7 +26,7 @@ spec:
         - name: ${SERVICE_NAME}
           image: ${IMAGE_FULL_NAME}
           ports:
-            - containerPort: 8000
+            - containerPort: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
               name: http
 
           # 🌍 환경 변수 직접 설정
@@ -35,7 +35,7 @@ spec:
             - name: SERVICE_NAME
               value: "${SERVICE_NAME}"
             - name: SERVICE_PORT
-              value: "8000"
+              value: "${SERVICE_PORT}"  # 8000 → ${SERVICE_PORT}
             - name: ENVIRONMENT
               value: "production"
             - name: LOG_LEVEL
@@ -101,11 +101,11 @@ spec:
               cpu: "500m"
               ephemeral-storage: "2Gi"
 
-          # 헬스체크 (빠른 시작)
+          # 헬스체크 (동적 포트 사용)
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 30
@@ -116,7 +116,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 15
             periodSeconds: 10

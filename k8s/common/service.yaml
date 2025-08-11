@@ -12,7 +12,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8000
+      targetPort: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
       protocol: TCP
   selector:
     app: sf-${SERVICE_NAME}

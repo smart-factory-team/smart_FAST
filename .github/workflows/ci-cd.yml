@@ -448,7 +448,61 @@ jobs:
           export REGISTRY="${{ env.REGISTRY }}"
           export IMAGE_FULL_NAME="${{ env.REGISTRY }}/smart-fast-${{ matrix.service }}:${{ github.sha }}"
 
-          echo "🚀 Deploying ${{ matrix.service }} with minimal setup"
+          case "${{ matrix.service }}" in
+            "painting-process-equipment-defect-detection-model-service")
+              export SERVICE_PORT="8001"
+              ;; 
+
+            "painting-surface-defect-detection-model-service")
+              export SERVICE_PORT="8002"
+              ;; 
+            
+            "press-defect-detection-model-service")
+              export SERVICE_PORT="8003"
+              ;; 
+
+            "press-fault-detection-model-service")
+              export SERVICE_PORT="8004"
+              ;; 
+
+            "vehicle-assembly-process-defect-detection-model-service")
+              export SERVICE_PORT="8005"
+              ;; 
+
+            "welding-machine-defect-detection-model-service")
+              export SERVICE_PORT="8006"
+              ;; 
+
+            "welding-machine-data-simulator-service")
+              export SERVICE_PORT="8016"
+              ;; 
+
+            "vehicle-assembly-data-simulator-service")
+              export SERVICE_PORT="8015"
+              ;; 
+
+            "press-fault-data-simulator-service")
+              export SERVICE_PORT="8014"
+              ;; 
+
+            "press-defect-data-simulator-service")
+              export SERVICE_PORT="8013"
+              ;; 
+
+            "painting-surface-data-simulator-service")
+              export SERVICE_PORT="8012"
+              ;; 
+
+            "painting-process-data-simulator-service")
+              export SERVICE_PORT="8011"
+              ;; 
+
+             *)
+              export SERVICE_PORT="8000"  # 기본값
+              ;;
+          esac
+
+          echo "🚀 Deploying ${{ matrix.service }} on port $SERVICE_PORT with minimal setup"
 
           # 순차적으로 배포 (의존성 고려)
           echo "📦 Creating namespace..."
