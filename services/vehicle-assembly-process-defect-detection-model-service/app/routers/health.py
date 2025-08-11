@@ -71,7 +71,7 @@ async def readiness_check(
                 "timestamp": datetime.now().isoformat(),
                 "request_id": request_id
             }
-        ) from e
+        )
 
     return ReadinessResponse(
         success=True,
@@ -119,24 +119,32 @@ async def startup_check(request_id: str = Depends(get_request_id)):
         all_passed = False
 
     # 2. 필수 디렉토리 확인
-    required_dirs = [
-        settings.MODEL_BASE_PATH,
-        settings.UPLOAD_DIR,
-        settings.TEMP_DIR
-    ]
+    # 2. 필수 디렉토리 확인
+    try:
+        required_dirs = [
+            settings.MODEL_BASE_PATH,
+            settings.UPLOAD_DIR,
+            settings.TEMP_DIR
+        ]
 
-    missing_dirs = [d for d in required_dirs if not os.path.exists(d)]
-    if missing_dirs:
+        missing_dirs = [d for d in required_dirs if not os.path.exists(d)]
+        if missing_dirs:
+            startup_checks["directories"] = {
+                "status": "failed",
+                "details": f"누락된 디렉토리: {missing_dirs}"
+            }
+            all_passed = False
+        else:
+            startup_checks["directories"] = {
+                "status": "passed",
+                "details": "모든 필수 디렉토리 존재 확인"
+            }
+    except Exception as e:
         startup_checks["directories"] = {
             "status": "failed",
-            "details": f"누락된 디렉토리: {missing_dirs}"
+            "details": f"디렉토리 확인 실패: {str(e)}"
         }
         all_passed = False
-    else:
-        startup_checks["directories"] = {
-            "status": "passed",
-            "details": "모든 필수 디렉토리 존재 확인"
-        }
 
     # 시작 준비 완료 여부 판단
     startup_time = time.time() - _service_start_time
@@ -155,7 +163,7 @@ async def startup_check(request_id: str = Depends(get_request_id)):
                 "timestamp": datetime.now().isoformat(),
                 "request_id": request_id
             }
-        ) from e
+        )
 
     return StartupResponse(
         success=True,
