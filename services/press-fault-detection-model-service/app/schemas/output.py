@@ -6,7 +6,7 @@ class PredictionResponse(BaseModel):
     prediction: str
     reconstruction_error: Optional[float]
     is_fault: bool
-    fault_probabilith: float = Field(
+    fault_probability: float = Field(
         ...,
         description="전체 시퀀스 중 고장으로 판정된 시퀀스의 비율 (0.0 ~ 1.0)",
         ge=0,  # Greater than or equal to 0
