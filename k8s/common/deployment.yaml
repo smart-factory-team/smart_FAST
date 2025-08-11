@@ -7,7 +7,7 @@ metadata:
     app: sf-${SERVICE_NAME}
     service: ${SERVICE_NAME}
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -26,7 +26,7 @@ spec:
         - name: ${SERVICE_NAME}
           image: ${IMAGE_FULL_NAME}
           ports:
-            - containerPort: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
+            - containerPort: ${SERVICE_PORT}
               name: http
 
           # 🌍 환경 변수 직접 설정
@@ -35,7 +35,7 @@ spec:
             - name: SERVICE_NAME
               value: "${SERVICE_NAME}"
             - name: SERVICE_PORT
-              value: "${SERVICE_PORT}"  # 8000 → ${SERVICE_PORT}
+              value: "${SERVICE_PORT}"
             - name: ENVIRONMENT
               value: "production"
             - name: LOG_LEVEL
@@ -95,19 +95,19 @@ spec:
           # 기본 리소스 설정 (필요에 따라 조정)
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
-              ephemeral-storage: "1Gi"
+              memory: "128Mi"     # 256Mi → 128Mi
+              cpu: "100m"         # 250m → 100m  
+              ephemtml:storage: "256Mi"  # 1Gi → 256Mi
             limits:
-              memory: "1Gi"
-              cpu: "500m"
-              ephemeral-storage: "2Gi"
+              memory: "512Mi"     # 1Gi → 512Mi
+              cpu: "200m"         # 500m → 200m
+              ephemeral-storage: "1Gi"    # 2Gi → 1Gi
 
-          # 헬스체크 (동적 포트 사용)
+          # 헬스체크 (빠른 시작)
           livenessProbe:
             httpGet:
               path: /health
-              port: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
+              port: ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 30
@@ -118,7 +118,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: ${SERVICE_PORT}  # 8000 → ${SERVICE_PORT}
+              port: ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 15
             periodSeconds: 10
