@@ -21,7 +21,7 @@ RUN mkdir -p \
     /app/logs \
     /app/model_cache \
     /app/cache \
-    && chmod -R 755 /app
+    && chmod -R 777 /app
 
 # HuggingFace 캐시 디렉토리 설정
 ENV HF_HUB_CACHE=/app/cache
