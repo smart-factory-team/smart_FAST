@@ -18,12 +18,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "자동차 의장 공정 불량 탐지 API"
     PROJECT_DESCRIPTION: str = "자동차 의장 공정에서 발생하는 부품 불량을 탐지하는 이미지 분류 API 서비스"
     VERSION: str = "1.0.0"
-    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
+    ENVIRONMENT: str = Field(default="production", env="ENVIRONMENT")
     DEBUG: bool = Field(default=True, env="DEBUG")
 
     # === 서버 설정 ===
     HOST: str = Field(default="0.0.0.0", env="HOST")
-    PORT: int = Field(default=8000, env="PORT")
+    PORT: int = Field(default=8005, env="PORT")
     API_V1_STR: str = "/api/v1"
 
     # === AI 모델 설정 ===
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     )
 
     # GPU/CPU 설정
-    USE_GPU: bool = Field(default=True, env="USE_GPU")
+    USE_GPU: bool = Field(default=False, env="USE_GPU")
     GPU_MEMORY_LIMIT: Optional[int] = Field(default=None, env="GPU_MEMORY_LIMIT")
 
     # 모델 캐시 설정

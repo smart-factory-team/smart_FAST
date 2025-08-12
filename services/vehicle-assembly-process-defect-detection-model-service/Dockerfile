@@ -2,7 +2,7 @@ FROM python:3.10
 
 WORKDIR /app
 
-# 시스템 의존성 설치 (opencv-python을 위한 최소 패키지)
+# 시스템 의존성 설치
 RUN apt-get update && apt-get install -y \
     gcc \
     libgl1-mesa-glx \
@@ -13,10 +13,17 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 디렉토리를 미리 생성하고 권한 설정
-RUN mkdir -p /app/models /app/cache && chmod -R 755 /app
+# config.py에서 필요한 모든 디렉토리들을 미리 생성
+RUN mkdir -p \
+    /app/models \
+    /app/uploads \
+    /app/temp \
+    /app/logs \
+    /app/model_cache \
+    /app/cache \
+    && chmod -R 755 /app
 
-# HuggingFace 캐시 디렉토리 생성
+# HuggingFace 캐시 디렉토리 설정
 ENV HF_HUB_CACHE=/app/cache
 
 # 애플리케이션 코드 복사
