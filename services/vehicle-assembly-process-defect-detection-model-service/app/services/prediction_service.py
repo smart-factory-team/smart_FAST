@@ -10,12 +10,10 @@ AI 모델을 사용한 이미지 불량 예측 기능을 제공합니다.
 import asyncio
 import io
 import time
-from typing import Dict, Any, Optional, List, Tuple, Union
+from typing import Dict, Any, List
 
 import logging
-from datetime import datetime
 
-import aiohttp
 import base64
 from fastapi import UploadFile
 from PIL import Image

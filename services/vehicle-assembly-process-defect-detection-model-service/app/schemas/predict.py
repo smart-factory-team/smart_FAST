@@ -1,16 +1,10 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Union
-from datetime import datetime
-import re
 
 from app.schemas.common import (
     BaseDataResponse,
     FileInfo,
-    ProcessingTime,
-    DefectCategory,
-    DefectType,
-    get_defect_category_by_id,
-    is_defective_category
+    ProcessingTime
 )
 
 
