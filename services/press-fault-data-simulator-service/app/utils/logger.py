@@ -13,23 +13,17 @@ class LevelBasedFormatter(logging.Formatter):
 
     # 기본 포맷
     simple_format = "✅ [%(levelname)s] %(message)s"
-    detailed_format = (
-        "🚨 [%(levelname)s] in %(module)s.%(funcName)s (line %(lineno)d):\n"
-        "   └─ %(message)s"
-    )
+    detailed_format = "🚨 [%(levelname)s]:\n" "   └─ %(message)s"
 
     def __init__(self):
         super().__init__(fmt="%(levelname)s: %(message)s", datefmt=None, style="%")
 
     def format(self, record):
-        # original_record = record.__dict__.copy()
         if record.levelno >= logging.WARNING:
             self._style._fmt = self.detailed_format
         else:
             self._style._fmt = self.simple_format
 
-        # result = logging.Formatter.format(self, record)
-        # record.__dict__.update(original_record)
         return super().format(record)
 
 
@@ -38,10 +32,9 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         super().add_fields(log_record, record, message_dict)
         if not log_record.get("timestamp"):
             log_record["timestamp"] = datetime.fromtimestamp(record.created).isoformat()
-        if log_record.get("level"):
-            log_record["level"] = log_record["level"].upper()
-        else:
-            log_record["level"] = record.levelname
+
+        # name을 service_name으로 변경하고 고정값 설정
+        log_record["service_name"] = "press fault detection"
 
 
 def setup_loggers():
@@ -63,7 +56,7 @@ def setup_loggers():
     if not system_logger.hasHandlers():
         system_console_handler = logging.StreamHandler(sys.stdout)
         system_formatter = logging.Formatter(
-            "[%(asctime)s] [SYSTEM] [%(levelname)s] %(message)s",
+            "[%(asctime)s] [%(levelname)s] %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         system_console_handler.setFormatter(system_formatter)
@@ -83,7 +76,7 @@ def setup_loggers():
         # 파일 핸들러
         # 이상 감지 시에만 로그 파일에 저장
         json_file_handler = TimedRotatingFileHandler(
-            filename=settings.LOG_FILE_PATH,
+            filename=settings.ERROR_LOG_FILE_PATH,
             when="midnight",
             interval=1,
             backupCount=30,
@@ -91,7 +84,7 @@ def setup_loggers():
         )
 
         json_formatter = CustomJsonFormatter(
-            "%(timestamp)s %(level)s %(name)s %(message)s"
+            "%(timestamp)s %(service_name)s %(message)s"
         )
         json_file_handler.setFormatter(json_formatter)
         json_file_handler.setLevel(logging.WARNING)
