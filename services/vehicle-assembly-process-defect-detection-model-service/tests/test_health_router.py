@@ -351,42 +351,6 @@ class TestHealthRouter:
         assert data["detail"]["data"]["checks"]["config"]["status"] == "failed"
         assert "Config error" in data["detail"]["data"]["checks"]["config"]["details"]
 
-    # Simplified tests that should pass
-    from unittest.mock import Mock, patch, PropertyMock
-
-    def test_startup_check_config_error(self, app, mock_request_id):
-        """Test startup check with configuration errors."""
-        # Override dependencies
-        def override_get_request_id():
-            return mock_request_id
-
-        app.dependency_overrides[get_request_id] = override_get_request_id
-
-        # Create a mock settings that raises an exception when ENVIRONMENT is accessed
-        mock_settings = Mock()
-
-        # PropertyMock을 사용해서 속성 접근 시 예외 발생
-        type(mock_settings).ENVIRONMENT = PropertyMock(side_effect=Exception("Config error"))
-
-        mock_settings.VERSION = "1.0.0"
-        mock_settings.MODEL_BASE_PATH = "/tmp/models"
-        mock_settings.UPLOAD_DIR = "/tmp/uploads"
-        mock_settings.TEMP_DIR = "/tmp/temp"
-
-        with patch('app.routers.health.settings', mock_settings):
-            client = TestClient(app)
-            response = client.get("/startup")
-
-        # Clean up
-        app.dependency_overrides.clear()
-
-        # Assert
-        assert response.status_code == 503
-        data = response.json()
-        assert data["detail"]["success"] is False
-        assert data["detail"]["data"]["checks"]["config"]["status"] == "failed"
-        assert "Config error" in data["detail"]["data"]["checks"]["config"]["details"]
-
     def test_timestamp_generation(self, app):
         """Test that timestamps are properly generated in responses."""
         mock_settings = Mock()

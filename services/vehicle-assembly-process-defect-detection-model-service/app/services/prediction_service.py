@@ -343,7 +343,7 @@ class PredictionService:
 
             # Base64 디코딩
             try:
-                image_bytes = base64.b64decode(base64_data)
+                image_bytes = base64.b64decode(base64_data, validate=True)
             except Exception as e:
                 raise InvalidImageException(f"Base64 디코딩 실패: {str(e)}") from e
 
@@ -438,10 +438,7 @@ class PredictionService:
 
         # 이미지 모드 확인 및 변환
         if image.mode not in ['RGB', 'RGBA', 'L']:
-            try:
-                image = image.convert('RGB')
-            except Exception:
-                raise InvalidImageException("지원하지 않는 이미지 색상 모드입니다") from None
+            raise InvalidImageException("지원하지 않는 이미지 색상 모드입니다.")
 
     async def _get_file_info(self, file: UploadFile, image: Image.Image) -> FileInfo:
         """
