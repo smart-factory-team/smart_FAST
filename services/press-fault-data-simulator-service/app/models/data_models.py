@@ -12,6 +12,23 @@ class PredictionRequest(BaseModel):
     AI1_Vibration: List[float] = Field(..., description="진동 데이터 리스트")
     AI2_Current: List[float] = Field(..., description="전류 데이터 리스트")
 
+    @classmethod
+    def from_csv_data(cls, df_data) -> "PredictionRequest":
+        """
+        pandas DataFrame에서 PredictionRequest 객체 생성
+
+        Args:
+            df_data: pandas DataFrame with columns ['AI0_Vibration', 'AI1_Vibration', 'AI2_Current']
+
+        Returns:
+            PredictionRequest: API 요청용 데이터 객체
+        """
+        return cls(
+            AI0_Vibration=df_data["AI0_Vibration"].tolist(),
+            AI1_Vibration=df_data["AI1_Vibration"].tolist(),
+            AI2_Current=df_data["AI2_Current"].tolist(),
+        )
+
 
 class PredictionResult(BaseModel):
     """
@@ -22,22 +39,5 @@ class PredictionResult(BaseModel):
     prediction: str
     reconstruction_error: float
     is_fault: bool
-    fault_probability: float
+    fault_probability: Optional[float] = None
     attribute_errors: Optional[Dict[str, float]] = None
-
-
-class SimulatorStatus(BaseModel):
-    """
-    시뮬레이터의 현재 상태를 나타내는 데이터 모델
-    """
-
-    status: str = Field(description="시뮬레이터의 현재 상태")
-    job_id: Optional[str] = Field(
-        default=None, description="현재 실행 중인 스케줄러 작업의 ID"
-    )
-    next_run_time: Optional[str] = Field(
-        default=None, description="다음 작업 실행 예정 시간 (ISO 8601 형식)"
-    )
-    last_run_result: Optional[str] = Field(
-        default=None, description="마지막으로 실행된 작업의 성공/실패 여부"
-    )
