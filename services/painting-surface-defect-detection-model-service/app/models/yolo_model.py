@@ -69,10 +69,8 @@ class PaintingSurfaceDefectModelLoader:
         """모델 설정 파일 로드"""
         try:
             config_filename = "model_config.json"
-            config_path = hf_hub_download(
-                repo_id=self.model_name, 
-                filename=config_filename
-            )
+            # 로컬 파일 경로 사용
+            config_path = os.path.join(os.path.dirname(__file__), config_filename)
             
             with open(config_path, "r", encoding="utf-8") as f:
                 self.model_config = json.load(f)
@@ -91,10 +89,8 @@ class PaintingSurfaceDefectModelLoader:
         """클래스 매핑 파일 로드"""
         try:
             mapping_filename = "class_mapping.json"
-            mapping_path = hf_hub_download(
-                repo_id=self.model_name, 
-                filename=mapping_filename
-            )
+            # 로컬 파일 경로 사용
+            mapping_path = os.path.join(os.path.dirname(__file__), mapping_filename)
             
             with open(mapping_path, "r", encoding="utf-8") as f:
                 class_mapping = json.load(f)
@@ -113,10 +109,8 @@ class PaintingSurfaceDefectModelLoader:
         """임계값 설정 파일 로드"""
         try:
             threshold_filename = "thresholds.json"
-            threshold_path = hf_hub_download(
-                repo_id=self.model_name, 
-                filename=threshold_filename
-            )
+            # 로컬 파일 경로 사용
+            threshold_path = os.path.join(os.path.dirname(__file__), threshold_filename)
             
             with open(threshold_path, "r", encoding="utf-8") as f:
                 thresholds = json.load(f)
@@ -124,9 +118,6 @@ class PaintingSurfaceDefectModelLoader:
             logger.info("Threshold configuration loaded successfully")
             return thresholds
             
-        except FileNotFoundError:
-            logger.warning(f"Threshold file '{threshold_filename}' not found, using empty thresholds")
-            return {}
         except Exception as e:
             logger.error(f"Failed to load threshold config: {str(e)}")
             return {}
