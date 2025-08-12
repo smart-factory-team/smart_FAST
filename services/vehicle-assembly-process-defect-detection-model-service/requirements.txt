@@ -1,0 +1,93 @@
+# ===================================
+# 자동차 의장 공정 불량 탐지 API
+# Required Python Packages
+# ===================================
+
+# === 웹 프레임워크 ===
+fastapi==0.116.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+starlette==0.47.2
+
+# === AI/ML 라이브러리 ===
+# PyTorch (GPU 지원)
+torch==2.2.0
+torchvision==0.17.0
+torchaudio>=2.0.0,<2.3.0
+
+# HuggingFace Hub (모델 다운로드용)
+huggingface-hub>=0.17.0
+
+# 이미지 처리
+Pillow>=10.0.0,<11.0.0
+opencv-python>=4.8.0
+
+# === 데이터 검증 및 설정 ===
+pydantic>=2.4.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0
+python-dotenv>=1.0.0
+
+# === HTTP 클라이언트 ===
+aiohttp>=3.9.0,<4.0.0
+httpx>=0.25.0
+requests>=2.31.0
+
+# === 시스템 모니터링 ===
+psutil>=5.9.0
+GPUtil>=1.4.0
+
+# === 로깅 및 유틸리티 ===
+colorama>=0.4.6
+rich>=13.0.0
+
+# === 데이터 처리 ===
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+
+# === 비동기 처리 ===
+asyncio-mqtt>=0.15.0
+
+# === 보안 ===
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# === 테스트 (개발용) ===
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+httpx>=0.25.0  # FastAPI 테스트용
+
+# === 코드 품질 (개발용) ===
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# === 배포 및 프로덕션 ===
+gunicorn>=21.2.0
+supervisor>=4.2.5
+
+# === 메모리 최적화 (선택적) ===
+# memory-profiler>=0.61.0
+# pympler>=0.9
+
+# === GPU 가속 (선택적) ===
+# CUDA 지원이 필요한 경우 아래 주석 해제
+# nvidia-ml-py>=12.535.0
+
+# === 모델 최적화 (선택적) ===
+# onnx>=1.15.0
+# onnxruntime>=1.16.0
+# optimum>=1.14.0
+
+# ===================================
+# 설치 순서 중요!
+# 1. 먼저 PyTorch 관련 패키지들
+# 2. 그 다음 나머지 패키지들
+# ===================================
+
+# GPU 버전 PyTorch 설치가 필요한 경우:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# CPU 버전만 필요한 경우:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
