@@ -329,9 +329,12 @@ class TestHealthRouter:
 
         app.dependency_overrides[get_request_id] = override_get_request_id
 
-        # Create a mock settings that raises an exception
+        # Create a mock settings that raises an exception when ENVIRONMENT is accessed
         mock_settings = Mock()
-        mock_settings.ENVIRONMENT = Mock(side_effect=Exception("Config error"))
+
+        # PropertyMock을 사용해서 속성 접근 시 예외 발생
+        type(mock_settings).ENVIRONMENT = PropertyMock(side_effect=Exception("Config error"))
+
         mock_settings.VERSION = "1.0.0"
         mock_settings.MODEL_BASE_PATH = "/tmp/models"
         mock_settings.UPLOAD_DIR = "/tmp/uploads"
