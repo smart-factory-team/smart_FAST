@@ -11,11 +11,12 @@ RUN apt-get update && apt-get install -y \
 
 # Python 의존성 복사 및 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r  \
-    requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 디렉토리를 미리 생성하고 권한 설정
+RUN mkdir -p /app/models /app/cache && chmod -R 755 /app
 
 # HuggingFace 캐시 디렉토리 생성
-RUN mkdir -p /app/cache && chmod 755 /app/cache
 ENV HF_HUB_CACHE=/app/cache
 
 # 애플리케이션 코드 복사
