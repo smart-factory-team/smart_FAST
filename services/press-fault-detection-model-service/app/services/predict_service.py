@@ -24,7 +24,7 @@ def predict_press_fault(data: SensorData) -> dict:
         scaler = model_cache.get("scaler")
         threshold = model_cache.get("threshold")
 
-        if not all([model, scaler, threshold is not None]):
+        if model is None or scaler is None or threshold is None:
             raise RuntimeError(
                 "모델, 스케일러 또는 임계값이 로드되지 않았습니다. 서버 로그를 확인하세요."
             )
