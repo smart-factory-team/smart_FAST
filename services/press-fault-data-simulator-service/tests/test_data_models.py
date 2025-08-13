@@ -148,7 +148,7 @@ class TestPredictionRequestFromCsvData:
 
     def test_invalid_element_in_list_raises_validation_error(self):
         df = _make_df({
-            "AI0_Vibration": [0.1, None, 0.3],  # None not coercible to float
+            "AI0_Vibration": [0.1, "invalid_value", 0.3],  # Non-numeric string to trigger validation error
             "AI1_Vibration": [1.0, 2.0, 3.0],
             "AI2_Current":   [5.5, 6.6, 7.7],
         })

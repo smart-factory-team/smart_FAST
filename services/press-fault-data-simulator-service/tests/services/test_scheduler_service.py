@@ -87,7 +87,7 @@ def make_service(monkeypatch):
 
         mock_api.health_check = AsyncMock(return_value=api_health)
         if api_call_raises is not None:
-            mock_api.call_precict_api = AsyncMock(side_effect=api_call_raises)
+            mock_api.call_predict_api = AsyncMock(side_effect=api_call_raises)
         else:
             if predict_result is None:
                 predict_result = SimpleNamespace(
@@ -95,7 +95,7 @@ def make_service(monkeypatch):
                     is_fault=bool(fault),
                     fault_probability=fault_probability if fault_probability is not None else None,
                 )
-            mock_api.call_precict_api = AsyncMock(return_value=predict_result)
+            mock_api.call_predict_api = AsyncMock(return_value=predict_result)
 
         # Patch constructors to return our mocks
         monkeypatch.setattr("app.services.scheduler_service.AzureStorageService", lambda: mock_storage)
@@ -264,7 +264,7 @@ async def test_run_single_simulation_handles_none_result_from_storage(make_servi
 @pytest.mark.asyncio
 async def test_run_single_simulation_handles_api_returning_none(make_service):
     service, storage, api, sys_log, _, _ = make_service()
-    api.call_precict_api.return_value = None
+    api.call_predict_api.return_value = None
 
     ok = await service._run_single_simulation()
     assert ok is False
@@ -347,18 +347,32 @@ async def test_run_simulation_loop_cancels_on_is_running_false(make_service):
     # Configure a single successful simulation, then flip is_running to False after first sleep iteration
     service, storage, api, sys_log, pred_log, cfg = make_service(interval_minutes=0)
 
-    # Patch sleep to allow loop to proceed without delay
+    # Track sleep calls to control when to stop
+    sleep_count = 0
+    
     async def fake_sleep(_):
-        # After first simulation call, is_running will be set to False to simulate stop
-        service.is_running = False
+        nonlocal sleep_count
+        sleep_count += 1
+        # After first sleep call, set is_running to False to simulate stop
+        if sleep_count >= 1:
+            service.is_running = False
 
     with patch("asyncio.sleep", new=AsyncMock(side_effect=fake_sleep)):
         await service.start_simulation()
-        # Wait for the task to notice is_running = False and exit loop
-        await asyncio.sleep(0)
-        # Now stop to ensure cleanup
-        with patch("asyncio.wait_for", new=AsyncMock(return_value=None)):
-            await service.stop_simulation()
+        
+        # Give the loop time to start, run once, and then exit
+        # The loop should call sleep, which sets is_running=False, then loop should exit
+        await asyncio.sleep(0.01)  # Small delay to allow loop execution
+        
+        # Ensure the task completes by waiting for it
+        if hasattr(service, 'task') and not service.task.done():
+            try:
+                await asyncio.wait_for(service.task, timeout=1.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+        
+        # Clean up
+        await service.stop_simulation()
 
     # Ensure loop start and end logs were called
     assert any("시뮬레이션 루프 시작" in str(c.args[0]) for c in sys_log.info.mock_calls)
@@ -370,25 +384,37 @@ async def test_run_simulation_loop_handles_exceptions_with_backoff(make_service)
     # Make _run_single_simulation raise an exception to trigger error path and sleep(10)
     service, storage, api, sys_log, pred_log, cfg = make_service(interval_minutes=0)
 
+    exception_raised = False
+    
     async def bad_single():
+        nonlocal exception_raised
+        exception_raised = True
+        # Stop the loop after raising exception to avoid infinite loop
+        service.is_running = False
         raise RuntimeError("loop-failure")
 
-    # Force is_running True for one iteration, then False to exit after handling error
     service.is_running = True
     with patch.object(service, "_run_single_simulation", new=AsyncMock(side_effect=bad_single)), \
          patch("asyncio.sleep", new=AsyncMock(return_value=None)) as sleep_mock:
-        # Run loop coroutine directly but only a slice to hit the exception branch once
+        # Run loop coroutine directly
         coro = service._run_simulation_loop()
         task = asyncio.create_task(coro)
-        # Allow it to run and handle the exception once
-        await asyncio.sleep(0)
-        service.is_running = False
-        # Allow cancellation/exit
-        await asyncio.sleep(0)
+        
+        # Give enough time for the exception to be raised and handled
+        await asyncio.sleep(0.01)
+        
         # Cleanup
-        with suppress(asyncio.CancelledError, asyncio.TimeoutError):
-            await asyncio.wait_for(task, timeout=0.1)
+        try:
+            await asyncio.wait_for(task, timeout=1.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
 
-    # Confirm error logged and that sleep was awaited (backoff path)
-    assert any("시뮬레이션 루프 오류" in str(c.args[0]) and "loop-failure" in str(c.args[0]) for c in sys_log.error.mock_calls)
-    assert sleep_mock.await_count >= 1
+    # Verify exception was raised and handled correctly
+    assert exception_raised, "Exception should have been raised"
+    
+    # Confirm error logged with the exception message
+    error_calls = [str(c.args[0]) for c in sys_log.error.mock_calls if c.args]
+    assert any("시뮬레이션 루프 오류" in msg and "loop-failure" in msg for msg in error_calls), f"Expected error log not found in: {error_calls}"
+    
+    # Confirm that sleep was called (backoff mechanism)
+    assert sleep_mock.await_count >= 1, f"Expected at least 1 sleep call for backoff, got {sleep_mock.await_count}"
