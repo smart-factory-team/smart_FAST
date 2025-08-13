@@ -20,7 +20,7 @@ class PredictAPIService:
 
         system_log.info(f"Predict API Service 초기화 완료 - URL: {self.api_url}")
 
-    async def call_precict_api(
+    async def call_predict_api(
         self, request: PredictionRequest
     ) -> Optional[PredictionResult]:
         """

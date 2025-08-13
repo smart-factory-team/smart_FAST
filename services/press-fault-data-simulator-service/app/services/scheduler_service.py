@@ -132,7 +132,7 @@ class SchedulerService:
             # 2. 예측  요청 데이터 생성
             prediction_request = PredictionRequest.from_csv_data(minute_data)
             # 3. API 호출
-            prediction_result = await self.api_service.call_precict_api(
+            prediction_result = await self.api_service.call_predict_api(
                 prediction_request
             )
 

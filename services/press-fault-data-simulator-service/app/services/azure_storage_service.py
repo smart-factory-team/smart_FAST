@@ -155,7 +155,7 @@ class AzureStorageService:
             system_log.info(f"파일 '{self.current_file_name}' 처리 완료")
             # 다음 파일로 이동
             self._move_to_next_file()
-            return await self.get_next_chunk()  # 재귀 호출로 다음 파일 처리
+            return await self.get_next_minute_data()  # 재귀 호출로 다음 파일 처리
 
         # 다음 처리를 위해 인덱스 업데이트
         old_index = self.current_row_index
