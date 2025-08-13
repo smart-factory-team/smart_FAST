@@ -32,13 +32,18 @@ except Exception as e:  # pragma: no cover - guidance for maintainers if path di
 def event_loop():
     # Use a fresh event loop to isolate tests and ensure proper cleanup of async tasks.
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
-    # Cancel any pending tasks to avoid warnings
-    pending = asyncio.all_tasks(loop=loop)
-    for t in pending:
-        t.cancel()
+    # Cancel any pending tasks and shutdown async generators in a 3.11-compatible way
+    async def _cancel_pending():
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     with suppress(Exception):
-        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        loop.run_until_complete(_cancel_pending())
+        loop.run_until_complete(loop.shutdown_asyncgens())
+    asyncio.set_event_loop(None)
     loop.close()
 
 
@@ -98,11 +103,19 @@ def make_service(monkeypatch):
 
         # Patch PredictionRequest to avoid real parsing; just echo input
         class FakePredictionRequest:
+            def __init__(self, data):
+                self.parsed = True
+                self.data = data
             @classmethod
             def from_csv_data(cls, data):
-                return {"parsed": True, "data": data}
+                return cls(data)
+            # Minimal Pydantic compatibility
+            def model_dump(self):
+                return {"parsed": self.parsed, "data": self.data}
+            def dict(self):
+                return self.model_dump()
         monkeypatch.setattr("app.services.scheduler_service.PredictionRequest", FakePredictionRequest)
-
+        
         # Patch settings and logs
         fake_settings = SimpleNamespace(
             SIMULATOR_INTERVAL_MINUTES=interval_minutes,

@@ -29,10 +29,14 @@ def _resolve_simulator_router_module():
     for name in candidates:
         try:
             return importlib.import_module(name)
-        except Exception as e:
+        except ModuleNotFoundError as e:
             last_err = e
-    raise ImportError(f"Could not import simulator_router module. Last error: {last_err}")
-
+            continue
+        except Exception:
+            # Surface real import-time errors from the target module instead of hiding them
+            raise
+    tried = ", ".join(candidates)
+    raise ImportError(f"Could not import simulator_router from any of: {tried}. Last error: {last_err}")
 
 @pytest.fixture(scope="module")
 def module_router_module():
@@ -43,7 +47,8 @@ def module_router_module():
 def router_test_client(module_router_module):
     app = FastAPI()
     app.include_router(module_router_module.router)
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture()

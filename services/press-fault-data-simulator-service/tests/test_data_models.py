@@ -27,29 +27,21 @@ def _resolve_models():
     We try a series of likely import paths commonly used in this repository layout.
     """
     candidate_modules = [
-        # Common module names
+        # Explicit, importable package paths (hyphens are invalid in module names)
+        "services.press_fault_data_simulator_service.app.models.data_models",
+        "services.press_fault_data_simulator_service.models.data_models",
         "services.press_fault_data_simulator_service.data_models",
-        "services.press-fault-data-simulator-service.data_models",
-        "services.press_fault_data_simulator_service.models",
-        "services.press-fault-data-simulator-service.models",
-        # Fallback: project-root-level module names
-        "data_models",
-        "models",
-        # In case code resides under 'app' or 'src'
-        "services.press_fault_data_simulator_service.app.data_models",
-        "services.press-fault-data-simulator-service.app.data_models",
-        "services.press_fault_data_simulator_service.src.data_models",
-        "services.press-fault-data-simulator-service.src.data_models",
     ]
 
     last_err = None
     for mod in candidate_modules:
         try:
             module = importlib.import_module(mod)
-            if hasattr(module, "PredictionRequest") and hasattr(module, "PredictionResult"):
-                return module.PredictionRequest, module.PredictionResult
-        except Exception as e:
+        except (ModuleNotFoundError, ImportError) as e:
             last_err = e
+            continue
+        if hasattr(module, "PredictionRequest") and hasattr(module, "PredictionResult"):
+            return module.PredictionRequest, module.PredictionResult
 
     # If we still can't import, define inline minimal versions based on the provided source code snippet
     # to ensure tests can validate behavior. This fallback keeps the tests meaningful even if import paths differ.
@@ -101,7 +93,7 @@ def _make_df(data_dict):
         def __getitem__(self, key):
             if key not in self:
                 raise KeyError(key)
-            return self[key]
+            return super().__getitem__(key)
 
     mdf = _MiniDF()
     for k, v in data_dict.items():

@@ -1,13 +1,15 @@
 import asyncio
 from typing import Any, Dict
-
+import aiohttp
 import pytest
 
 # Note on test framework:
 # These tests use pytest with pytest.mark.asyncio to validate async behavior without adding new dependencies.
 
 # Import the service under test and its dependencies
-from app.services.prediction_api_service import PredictAPIService  # assuming service path; adjust if different
+from app.services.prediction_api_service import (
+    PredictAPIService,
+)  # assuming service path; adjust if different
 from app.models.data_models import PredictionRequest, PredictionResult
 from app.config import settings as settings_module
 
@@ -31,7 +33,12 @@ def make_prediction_request(
 
 
 class DummyResponse:
-    def __init__(self, status: int, json_payload: Dict[str, Any] | None = None, text_body: str = ""):
+    def __init__(
+        self,
+        status: int,
+        json_payload: Dict[str, Any] | None = None,
+        text_body: str = "",
+    ):
         self.status = status
         self._json_payload = json_payload
         self._text_body = text_body
@@ -99,6 +106,7 @@ def patch_sleep(monkeypatch):
     # Speed up retries by replacing asyncio.sleep with a no-op that still yields control
     async def fast_sleep(_):
         await asyncio.sleep(0)  # one loop to maintain async semantics
+
     # To avoid recursion, patch to a coroutine that just returns None without calling itself
     async def no_sleep(_):
         return None
@@ -134,17 +142,33 @@ def patch_aiohttp_session(monkeypatch):
 @pytest.fixture
 def patch_settings(monkeypatch):
     # Patch URLs used by the service
-    monkeypatch.setattr(settings_module.settings, "PREDICTION_API_FULL_URL", "http://example.test/predict", raising=False)
-    monkeypatch.setattr(settings_module.settings, "PRESS_FAULT_MODEL_BASE_URL", "http://example.test", raising=False)
+    monkeypatch.setattr(
+        settings_module.settings,
+        "PREDICTION_API_FULL_URL",
+        "http://example.test/predict",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        settings_module.settings,
+        "PRESS_FAULT_MODEL_BASE_URL",
+        "http://example.test",
+        raising=False,
+    )
 
 
 @pytest.mark.asyncio
-async def test_call_predict_api_success_happy_path(patch_settings, patch_aiohttp_session):
+async def test_call_predict_api_success_happy_path(
+    patch_settings, patch_aiohttp_session
+):
     # Arrange: 200 response with valid JSON that matches PredictionResult
     def session_factory(_timeout):
         def post_side_effect(url, payload, headers):
             # Validate that JSON matches request.model_dump() keys
-            assert "AI0_Vibration" in payload and "AI1_Vibration" in payload and "AI2_Current" in payload
+            assert (
+                "AI0_Vibration" in payload
+                and "AI1_Vibration" in payload
+                and "AI2_Current" in payload
+            )
             # Return a context manager which yields a DummyResponse
             return DummyResponse(
                 200,
@@ -152,8 +176,10 @@ async def test_call_predict_api_success_happy_path(patch_settings, patch_aiohttp
                     # Minimal plausible fields; adjust if PredictionResult requires more
                     "prediction": "NORMAL",
                     "is_fault": False,
+                    "reconstruction_error": 0.0,
                 },
             )
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -162,21 +188,25 @@ async def test_call_predict_api_success_happy_path(patch_settings, patch_aiohttp
     req = make_prediction_request()
 
     # Act
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     # Assert
     assert isinstance(result, PredictionResult)
     assert result.prediction in ("NORMAL", "OK")
     assert result.is_fault is False
+    assert isinstance(result.reconstruction_error, float)
 
 
 @pytest.mark.asyncio
-async def test_call_predict_api_invalid_response_returns_none(patch_settings, patch_aiohttp_session):
+async def test_call_predict_api_invalid_response_returns_none(
+    patch_settings, patch_aiohttp_session
+):
     # Arrange: 200 but invalid JSON payload that breaks PredictionResult construction
     def session_factory(_timeout):
         def post_side_effect(url, payload, headers):
             # Missing required fields to force a validation error
             return DummyResponse(200, {"unexpected": "data"})
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -185,7 +215,7 @@ async def test_call_predict_api_invalid_response_returns_none(patch_settings, pa
     req = make_prediction_request()
 
     # Act
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     # Assert
     assert result is None
@@ -202,6 +232,7 @@ async def test_call_predict_api_non_200_retries_then_returns_none(
             attempts.append(1)
             # Always return 500 with some text body
             return DummyResponse(500, None, "Internal Server Error")
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -212,7 +243,7 @@ async def test_call_predict_api_non_200_retries_then_returns_none(
 
     req = make_prediction_request()
 
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     assert result is None
     # Should have attempted exactly max_retries times
@@ -240,6 +271,7 @@ async def test_call_predict_api_timeout_error_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -249,7 +281,7 @@ async def test_call_predict_api_timeout_error_retries_then_none(
 
     req = make_prediction_request()
 
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     assert result is None
     assert len(attempts) == 3
@@ -264,6 +296,7 @@ async def test_call_predict_api_client_connection_error_retries_then_none(
     class RaisingPost:
         async def __aenter__(self):
             import aiohttp
+
             raise aiohttp.ClientConnectionError("connection failed")
 
         async def __aexit__(self, exc_type, exc, tb):
@@ -273,6 +306,7 @@ async def test_call_predict_api_client_connection_error_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -282,7 +316,7 @@ async def test_call_predict_api_client_connection_error_retries_then_none(
 
     req = make_prediction_request()
 
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     assert result is None
     assert len(attempts) == 2
@@ -305,6 +339,7 @@ async def test_call_predict_api_unexpected_exception_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
+
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -314,7 +349,7 @@ async def test_call_predict_api_unexpected_exception_retries_then_none(
 
     req = make_prediction_request()
 
-    result = await svc.call_precict_api(req)
+    result = await svc.call_predict_api(req)
 
     assert result is None
     assert len(attempts) == 2
@@ -327,6 +362,7 @@ async def test_health_check_success_returns_true(patch_settings, patch_aiohttp_s
         def get_side_effect(url):
             assert url.endswith("/health")
             return DummyResponse(200, None, "healthy")
+
         return DummySession(timeout=_timeout, get_side_effect=get_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -338,11 +374,14 @@ async def test_health_check_success_returns_true(patch_settings, patch_aiohttp_s
 
 
 @pytest.mark.asyncio
-async def test_health_check_non_200_returns_false(patch_settings, patch_aiohttp_session):
+async def test_health_check_non_200_returns_false(
+    patch_settings, patch_aiohttp_session
+):
     # Arrange: GET /health returns 503
     def session_factory(_timeout):
         def get_side_effect(url):
             return DummyResponse(503, None, "unhealthy")
+
         return DummySession(timeout=_timeout, get_side_effect=get_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -354,7 +393,9 @@ async def test_health_check_non_200_returns_false(patch_settings, patch_aiohttp_
 
 
 @pytest.mark.asyncio
-async def test_health_check_requests_exception_caught_returns_false(patch_settings, monkeypatch):
+async def test_health_check_requests_exception_caught_returns_false(
+    patch_settings, monkeypatch
+):
     # The code catches requests.exceptions.RequestException despite using aiohttp.
     # We simulate that specific exception to ensure the except block is executed.
     import requests
@@ -370,10 +411,11 @@ async def test_health_check_requests_exception_caught_returns_false(patch_settin
         def get(self, url):
             class Ctx:
                 async def __aenter__(self_inner):
-                    raise requests.exceptions.RequestException("simulated requests exception")
+                    raise aiohttp.ClientError("simulated aiohttp exception")
 
                 async def __aexit__(self_inner, exc_type, exc, tb):
                     return False
+
             return Ctx()
 
     class SessionFactory:
