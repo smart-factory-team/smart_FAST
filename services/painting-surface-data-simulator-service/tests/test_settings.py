@@ -15,7 +15,7 @@ class TestSettings:
         assert settings.painting_data_folder == "painting-surface"
         assert settings.scheduler_interval_minutes == 1
         assert settings.batch_size == 10
-        assert settings.painting_model_url == "http://painting-model-service:8002"
+        assert settings.painting_model_url == "http://localhost:8002"
         assert settings.log_directory == "logs"
         assert settings.log_filename == "painting_defect_detections.json"
         assert settings.error_log_filename == "painting_errors.json"
@@ -35,7 +35,7 @@ class TestSettings:
             assert settings.painting_data_folder == "painting-surface"
             assert settings.scheduler_interval_minutes == 1
             assert settings.batch_size == 10
-            assert settings.painting_model_url == "http://painting-model-service:8002"
+            assert settings.painting_model_url == "http://localhost:8002"
             assert settings.log_directory == "logs"
             assert settings.log_filename == "painting_defect_detections.json"
             assert settings.error_log_filename == "painting_errors.json"
@@ -56,7 +56,7 @@ class TestSettings:
         
         try:
             settings = Settings()
-            assert settings.model_service_url == "http://painting-model-service:8002"
+            assert settings.model_service_url == "http://localhost:8002"
         finally:
             if 'AZURE_CONNECTION_STRING' in os.environ:
                 del os.environ['AZURE_CONNECTION_STRING']

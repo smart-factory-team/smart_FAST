@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     batch_size: int = 10
     
     # 도장 표면 결함 감지 모델 서비스 설정
-    painting_model_url: str = "http://painting-model-service:8002"
+    painting_model_url: str = "http://localhost:8002"
     
     # 로그 설정
     log_directory: str = "logs"
