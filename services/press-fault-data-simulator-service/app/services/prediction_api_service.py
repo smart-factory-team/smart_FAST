@@ -1,9 +1,7 @@
-import requests
 import time
 from typing import Optional
 import aiohttp
 import asyncio
-import json
 
 from app.config.settings import settings
 from app.models.data_models import PredictionRequest, PredictionResult
@@ -139,6 +137,6 @@ class PredictAPIService:
                         )
                         return False
 
-        except requests.exceptions.RequestException as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             system_log.error(f"API 서버 상태 확인 실패: {str(e)}")
             return False
