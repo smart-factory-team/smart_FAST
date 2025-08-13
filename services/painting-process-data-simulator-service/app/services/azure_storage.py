@@ -35,9 +35,12 @@ class AzureStorageService:
                 if blob.name.endswith('.csv'):
                     blob_list.append(blob.name)
 
+            await container_client.close()
             return sorted(blob_list)
         except Exception as e:
             logger.error(f"❌ Painting 데이터 파일 목록 조회 실패: {e}")
+            if container_client:  
+                await container_client.close()
             return []
 
     async def read_csv_data(self, blob_name: str) -> Optional[pd.DataFrame]:
@@ -55,11 +58,14 @@ class AzureStorageService:
             content = await blob_data.readall()
             df = pd.read_csv(io.StringIO(content.decode('utf-8')))
 
+            await blob_client.close()
             logger.info(f"📁 파일 읽기 성공: {blob_name} ({len(df)} rows)")
             return df
 
         except Exception as e:
             logger.error(f"❌ 파일 읽기 실패 ({blob_name}): {e}")
+            if blob_client:  
+                await blob_client.close()
             return None
 
     async def simulate_real_time_data(self) -> Optional[Dict[str, Any]]:

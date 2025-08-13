@@ -13,7 +13,7 @@
 ## 3. 프로젝트 구조
 
 ```text
-painting-process-backend-simulator-service/
+painting-process-data-simulator-service/
 ├── app/
 │   ├── main.py                      # FastAPI 애플리케이션의 메인 진입점
 │   ├── config/

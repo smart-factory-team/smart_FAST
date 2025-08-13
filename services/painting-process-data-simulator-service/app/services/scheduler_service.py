@@ -5,6 +5,7 @@ from app.config.settings import settings
 from app.services.azure_storage import azure_storage
 from app.services.backend_client import backend_client
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,9 @@ class SimulatorScheduler:
                 trigger=IntervalTrigger(seconds=settings.scheduler_interval_seconds),
                 id='data_simulation',
                 name='Data Simulation and Sending',
+                max_instances=1,          # prevent overlapping runs
+                coalesce=True,            # collapse missed runs to one run
+                misfire_grace_time=30,    # seconds to allow a delayed run
                 replace_existing=True
             )
 
@@ -44,7 +48,7 @@ class SimulatorScheduler:
             logger.warning("⚠️ 스케줄러가 실행 중이 아닙니다.")
             return
 
-        self.scheduler.shutdown()
+        await asyncio.to_thread(self.scheduler.shutdown)
         self.is_running = False
         logger.info("🛑 시뮬레이터 중지됨")
 

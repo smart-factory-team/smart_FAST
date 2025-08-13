@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-
+from pydantic import AnyHttpUrl, field_validator  
 
 class Settings(BaseSettings):
     # Azure Storage 설정
@@ -14,13 +14,21 @@ class Settings(BaseSettings):
     batch_size: int = 10
 
     # Backend 서비스 설정
-    backend_service_url: str = "http://localhost:8087/equipment-data"
+    backend_service_url: AnyHttpUrl = "http://localhost:8087/equipment-data" 
 
     # HTTP 클라이언트 설정
     http_timeout: int = 30
 
     # 로그 디렉토리
     log_directory: str = "logs"
+
+    # Validators  
+    @field_validator("scheduler_interval_seconds")  
+    @classmethod  
+    def _positive_interval(cls, v: int) -> int:  
+        if v <= 0:  
+            raise ValueError("scheduler_interval_seconds must be > 0")  
+        return v  
 
     model_config = {
         "env_file": ".env",

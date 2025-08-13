@@ -9,7 +9,9 @@ from app.config.logging_config import setup_logging
 import os
 
 # 로깅 설정
-setup_logging()
+# Ensure log directory exists before creating FileHandler(s)  
+os.makedirs(settings.log_directory, exist_ok=True)  
+setup_logging()  
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -22,9 +24,6 @@ async def lifespan(app: FastAPI):
     if not settings.azure_connection_string:
         logger.error("AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다.")
         raise ValueError("AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다. .env 파일을 생성하거나 환경 변수를 설정해주세요.")
-
-    # 로그 디렉토리 생성
-    os.makedirs(settings.log_directory, exist_ok=True)
 
     logger.info(f"📁 로그 디렉토리: {settings.log_directory}")
     logger.info(f"🔧 스케줄러 간격: {settings.scheduler_interval_seconds}초")
