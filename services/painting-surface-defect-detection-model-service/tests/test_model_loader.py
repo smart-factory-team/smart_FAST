@@ -365,9 +365,6 @@ class TestPaintingSurfaceDefectModelLoader:
         # model_type이 있을 수 있으므로 제거하지 않음
 
 
-if __name__ == "__main__":
-    pytest.main([__file__]) 
-
     def test_load_yolo_model_invalid_file_extension(self):
         """잘못된 파일 확장자로 모델 로딩 실패 테스트"""
         with patch('app.models.yolo_model.hf_hub_download') as mock_hf_download:
@@ -786,3 +783,6 @@ if __name__ == "__main__":
         assert second_loader.model_config is None
         assert second_loader.org == self.model_loader.org
         assert second_loader.repo == self.model_loader.repo
+
+if __name__ == "__main__":
+    pytest.main([__file__]) 
