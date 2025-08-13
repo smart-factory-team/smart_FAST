@@ -78,8 +78,7 @@ class SchedulerService:
                 pass
 
         # Azure Storage 연결 정리
-        if hasattr(self.storage_service, "close"):
-            await self.storage_service.close()
+        await self.storage_service.close()
         # 통계 출력
         if self.start_time:
             duration = datetime.now() - self.start_time

@@ -197,8 +197,14 @@ class AzureStorageService:
 
     async def close(self):
         """연결 종료 (선택적)"""
-        if hasattr(self, "blob_service_client") and self.blob_service_client:
-            await self.blob_service_client.close()
+        try:
+            if hasattr(self, "blob_service_client") and self.blob_service_client:
+                await self.blob_service_client.close()
+                system_log.info("Azure Storage 연결 종료 완료")
+        except Exception as e:
+            system_log.error(f"Azure Storage 연결 종료 중 오류: {str(e)}")
+        finally:
+            self.is_connected = False
 
 
 azure_storage = AzureStorageService()

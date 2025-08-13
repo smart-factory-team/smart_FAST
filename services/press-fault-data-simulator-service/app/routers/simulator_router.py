@@ -38,7 +38,7 @@ async def start_simulation():
 
     except Exception as e:
         system_log.error(f"시뮬레이션 시작 API 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}") from e
 
 
 @router.post("/stop", response_model=SimulationResponse)
@@ -60,7 +60,7 @@ async def stop_simulation():
 
     except Exception as e:
         system_log.error(f"시뮬레이션 종료 API 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}") from e
 
 
 @router.get("/status", response_model=SimulationResponse)
@@ -77,4 +77,4 @@ async def get_simulation_status():
 
     except Exception as e:
         system_log.error(f"시뮬레이션 상태 조회 API 오류: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}") from e

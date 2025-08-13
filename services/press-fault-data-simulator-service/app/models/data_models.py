@@ -23,6 +23,17 @@ class PredictionRequest(BaseModel):
         Returns:
             PredictionRequest: API 요청용 데이터 객체
         """
+        required_columns = ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]
+
+        if df_data is None or df_data.empty:
+            raise ValueError("DataFrame이 비어있습니다.")
+
+        missing_columns = [
+            col for col in required_columns if col not in df_data.columns
+        ]
+        if missing_columns:
+            raise ValueError(f"필수 컬럼이 누락되었습니다: {missing_columns}")
+
         return cls(
             AI0_Vibration=df_data["AI0_Vibration"].tolist(),
             AI1_Vibration=df_data["AI1_Vibration"].tolist(),
