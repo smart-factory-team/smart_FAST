@@ -58,6 +58,7 @@ class TestPredictRouter:
             "prediction": "정상",
             "reconstruction_error": 0.05,
             "is_fault": False,
+            "fault_probability": 0.01,
             "attribute_errors": None
         }
 
@@ -68,6 +69,7 @@ class TestPredictRouter:
             "prediction": "고장",
             "reconstruction_error": 0.85,
             "is_fault": True,
+            "fault_probability": 0.8,
             "attribute_errors": {
                 "AI0_Vibration": 0.45,
                 "AI1_Vibration": 0.32,
@@ -75,7 +77,7 @@ class TestPredictRouter:
             }
         }
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_success_normal_condition(self, mock_predict, valid_sensor_data, mock_prediction_result_normal):
         """Test successful prediction with normal condition."""
         # Arrange
@@ -93,7 +95,7 @@ class TestPredictRouter:
         assert response_data["attribute_errors"] is None
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_success_fault_detected(self, mock_predict, valid_sensor_data, mock_prediction_result_fault):
         """Test successful prediction when fault is detected."""
         # Arrange
@@ -114,7 +116,7 @@ class TestPredictRouter:
         assert "AI2_Current" in response_data["attribute_errors"]
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_runtime_error_model_not_loaded(self, mock_predict, valid_sensor_data):
         """Test handling of RuntimeError when model is not loaded (503 Service Unavailable)."""
         # Arrange
@@ -129,7 +131,7 @@ class TestPredictRouter:
         assert "모델, 스케일러 또는 임계값이 로드되지 않았습니다" in response_data["detail"]
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_runtime_error_different_message(self, mock_predict, valid_sensor_data):
         """Test handling of RuntimeError with different error message."""
         # Arrange
@@ -144,9 +146,9 @@ class TestPredictRouter:
         assert response_data["detail"] == "GPU memory allocation failed"
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_value_error_exception(self, mock_predict, valid_sensor_data):
-        """Test handling of ValueError exceptions during prediction (500 Internal Server Error)."""
+        """Test handling of ValueError exceptions during prediction (400 Bad Request)."""
         # Arrange
         mock_predict.side_effect = ValueError("입력 데이터 길이(10)가 시퀀스 길이 (20)보다 짧아 예측을 수행할 수 없습니다.")
 
@@ -154,13 +156,13 @@ class TestPredictRouter:
         response = client.post("/predict", json=valid_sensor_data)
 
         # Assert
-        assert response.status_code == 500
+        assert response.status_code == 400
         response_data = response.json()
-        assert "예측 처리 중 오류 발생:" in response_data["detail"]
+        assert "데이터 유효성 검사 실패:" in response_data["detail"]
         assert "입력 데이터 길이" in response_data["detail"]
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_generic_exception(self, mock_predict, valid_sensor_data):
         """Test handling of generic exceptions during prediction."""
         # Arrange
@@ -241,7 +243,7 @@ class TestPredictRouter:
         # Assert
         assert response.status_code == 422
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_boundary_values(self, mock_predict, mock_prediction_result_normal):
         """Test prediction with boundary values for sensor data."""
         # Arrange
@@ -259,7 +261,7 @@ class TestPredictRouter:
         assert response.status_code == 200
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_extreme_reconstruction_error(self, mock_predict, valid_sensor_data):
         """Test prediction with extreme reconstruction error values."""
         # Arrange
@@ -267,6 +269,7 @@ class TestPredictRouter:
             "prediction": "고장",
             "reconstruction_error": 999.999,  # Very high error
             "is_fault": True,
+            "fault_probability": 1.0,
             "attribute_errors": {
                 "AI0_Vibration": 333.33,
                 "AI1_Vibration": 333.33,
@@ -284,7 +287,7 @@ class TestPredictRouter:
         assert response_data["reconstruction_error"] == 999.999
         assert response_data["is_fault"]
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_minimal_reconstruction_error(self, mock_predict, valid_sensor_data):
         """Test prediction with minimal reconstruction error values."""
         # Arrange
@@ -292,6 +295,7 @@ class TestPredictRouter:
             "prediction": "정상",
             "reconstruction_error": 0.000001,  # Very low error
             "is_fault": False,
+            "fault_probability": 0.0,
             "attribute_errors": None
         }
         mock_predict.return_value = minimal_error_result
@@ -305,7 +309,7 @@ class TestPredictRouter:
         assert response_data["reconstruction_error"] == 0.000001
         assert not response_data["is_fault"]
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_service_called_with_correct_data_structure(self, mock_predict, valid_sensor_data, mock_prediction_result_normal):
         """Test that the predict service is called with correct SensorData object structure."""
         # Arrange
@@ -318,9 +322,9 @@ class TestPredictRouter:
         assert response.status_code == 200
         mock_predict.assert_called_once()
         called_args = mock_predict.call_args
-        assert called_args.kwargs["data"] is not None
+        assert called_args.args[0] is not None
         # Verify that the service was called with a SensorData instance with correct attributes
-        sensor_data = called_args.kwargs["data"]
+        sensor_data = called_args.args[0]
         assert hasattr(sensor_data, "AI0_Vibration")
         assert hasattr(sensor_data, "AI1_Vibration")
         assert hasattr(sensor_data, "AI2_Current")
@@ -331,7 +335,7 @@ class TestPredictRouter:
         # Arrange
         sensor_data = SensorData(**valid_sensor_data)
 
-        with patch('app.routers.predict_router.predict') as mock_predict:
+        with patch('app.routers.predict_router.predict_press_fault') as mock_predict:
             mock_predict.return_value = mock_prediction_result_normal
 
             # Act
@@ -349,7 +353,7 @@ class TestPredictRouter:
         # Arrange
         sensor_data = SensorData(**valid_sensor_data)
 
-        with patch('app.routers.predict_router.predict') as mock_predict:
+        with patch('app.routers.predict_router.predict_press_fault') as mock_predict:
             mock_predict.side_effect = RuntimeError("Model initialization failed")
 
             # Act & Assert
@@ -365,7 +369,7 @@ class TestPredictRouter:
         # Arrange
         sensor_data = SensorData(**valid_sensor_data)
 
-        with patch('app.routers.predict_router.predict') as mock_predict:
+        with patch('app.routers.predict_router.predict_press_fault') as mock_predict:
             mock_predict.side_effect = Exception("Unexpected error")
 
             # Act & Assert
@@ -375,7 +379,7 @@ class TestPredictRouter:
             assert exc_info.value.status_code == 500
             assert "예측 처리 중 오류 발생: Unexpected error" in exc_info.value.detail
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_stress_test_multiple_requests(self, mock_predict, valid_sensor_data, mock_prediction_result_normal):
         """Test handling of multiple concurrent requests."""
         # Arrange
@@ -388,7 +392,7 @@ class TestPredictRouter:
 
         assert mock_predict.call_count == 10
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_response_model_compliance(self, mock_predict, valid_sensor_data):
         """Test that response complies with PredictionResponse model."""
         # Arrange
@@ -396,6 +400,7 @@ class TestPredictRouter:
             "prediction": "고장",
             "reconstruction_error": 0.75,
             "is_fault": True,
+            "fault_probability": 0.7,
             "attribute_errors": {
                 "AI0_Vibration": 0.25,
                 "AI1_Vibration": 0.30,
@@ -428,7 +433,7 @@ class TestPredictRouter:
     #     predict_route = predict_routes[0]
     #     assert "POST" in predict_route.methods
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_large_dataset(self, mock_predict, mock_prediction_result_normal):
         """Test prediction with large dataset (many data points)."""
         # Arrange
@@ -447,7 +452,7 @@ class TestPredictRouter:
         assert response.status_code == 200
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_exact_minimum_length(self, mock_predict, mock_prediction_result_normal):
         """Test prediction with exact minimum required data length."""
         # Arrange
@@ -465,7 +470,7 @@ class TestPredictRouter:
         assert response.status_code == 200
         mock_predict.assert_called_once()
 
-    @patch('app.routers.predict_router.predict')
+    @patch('app.routers.predict_router.predict_press_fault')
     def test_predict_fault_all_attribute_errors_present(self, mock_predict, valid_sensor_data):
         """Test that all three attribute errors are properly returned when fault is detected."""
         # Arrange
@@ -473,6 +478,7 @@ class TestPredictRouter:
             "prediction": "고장",
             "reconstruction_error": 0.95,
             "is_fault": True,
+            "fault_probability": 0.9,
             "attribute_errors": {
                 "AI0_Vibration": 0.45,
                 "AI1_Vibration": 0.32,
