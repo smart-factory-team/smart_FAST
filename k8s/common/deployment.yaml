@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: smart-fast-${SERVICE_NAME}
-  namespace: smart-fast-${SERVICE_NAME}
+  name: sf-${SERVICE_NAME}
+  namespace: sf-${SERVICE_NAME}
   labels:
-    app: smart-fast-${SERVICE_NAME}
+    app: sf-${SERVICE_NAME}
     service: ${SERVICE_NAME}
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -15,18 +15,18 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: smart-fast-${SERVICE_NAME}
+      app: sf-${SERVICE_NAME}
   template:
     metadata:
       labels:
-        app: smart-fast-${SERVICE_NAME}
+        app: sf-${SERVICE_NAME}
         service: ${SERVICE_NAME}
     spec:
       containers:
         - name: ${SERVICE_NAME}
           image: ${IMAGE_FULL_NAME}
           ports:
-            - containerPort: 8000
+            - containerPort: ${SERVICE_PORT}
               name: http
 
           # 🌍 환경 변수 직접 설정
@@ -35,13 +35,15 @@ spec:
             - name: SERVICE_NAME
               value: "${SERVICE_NAME}"
             - name: SERVICE_PORT
-              value: "8000"
+              value: "${SERVICE_PORT}"
             - name: ENVIRONMENT
               value: "production"
             - name: LOG_LEVEL
               value: "INFO"
             - name: DEBUG
               value: "false"
+            - name: AZURE_CONNECTION_STRING
+              value: "${AZURE_CONNECTION_STRING}"  
 
           # 필요시 주석 해제하여 사용
           # 데이터베이스 설정
@@ -75,14 +77,16 @@ spec:
           #   value: "30"
 
           # AI 모델 설정 (AI 서비스용)
-          # - name: MODEL_CACHE_DIR
-          #   value: "/tmp/models"
-          # - name: HF_HOME
-          #   value: "/tmp/cache"
-          # - name: TRANSFORMERS_CACHE
-          #   value: "/tmp/cache/transformers"
-          # - name: TOKENIZER_PARALLELISM
-          #   value: "false"
+            - name: MODEL_CACHE_DIR
+              value: "/tmp/models"
+            - name: HF_HOME
+              value: "/tmp/cache"
+            - name: TRANSFORMERS_CACHE
+              value: "/tmp/cache/transformers"
+            - name: HF_DATASETS_CACHE
+              value: "/tmp/cache/datasets"
+            - name: TOKENIZER_PARALLELISM
+              value: "false"
 
           # 외부 API 키들
           # - name: OPENAI_API_KEY
@@ -93,19 +97,19 @@ spec:
           # 기본 리소스 설정 (필요에 따라 조정)
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
-              ephemeral-storage: "1Gi"
+              memory: "128Mi"     # 256Mi → 128Mi
+              cpu: "100m"         # 250m → 100m  
+              ephemeral-storage: "256Mi"  # 1Gi → 256Mi
             limits:
-              memory: "1Gi"
-              cpu: "500m"
-              ephemeral-storage: "2Gi"
+              memory: "512Mi"     # 1Gi → 512Mi
+              cpu: "200m"         # 500m → 200m
+              ephemeral-storage: "1Gi"    # 2Gi → 1Gi
 
           # 헬스체크 (빠른 시작)
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 30
@@ -116,7 +120,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: ${SERVICE_PORT}
               scheme: HTTP
             initialDelaySeconds: 15
             periodSeconds: 10
