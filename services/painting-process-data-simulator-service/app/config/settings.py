@@ -23,12 +23,19 @@ class Settings(BaseSettings):
     log_directory: str = "logs"
 
     # Validators  
-    @field_validator("scheduler_interval_seconds")  
-    @classmethod  
-    def _positive_interval(cls, v: int) -> int:  
-        if v <= 0:  
-            raise ValueError("scheduler_interval_seconds must be > 0")  
-        return v  
+    @field_validator("scheduler_interval_seconds")
+    @classmethod
+    def _positive_interval(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("scheduler_interval_seconds must be > 0")
+        return v
+
+    @field_validator("batch_size", "http_timeout")
+    @classmethod
+    def _positive_ints(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("batch_size and http_timeout must be > 0")
+        return v
 
     model_config = {
         "env_file": ".env",
