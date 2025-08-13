@@ -34,11 +34,12 @@ class PredictionRequest(BaseModel):
         if missing_columns:
             raise ValueError(f"필수 컬럼이 누락되었습니다: {missing_columns}")
 
-        return cls(
-            AI0_Vibration=df_data["AI0_Vibration"].tolist(),
-            AI1_Vibration=df_data["AI1_Vibration"].tolist(),
-            AI2_Current=df_data["AI2_Current"].tolist(),
-        )
+        data_dict = {
+            "AI0_Vibration": df_data["AI0_Vibration"].tolist(),
+            "AI1_Vibration": df_data["AI1_Vibration"].tolist(),
+            "AI2_Current": df_data["AI2_Current"].tolist(),
+        }
+        return cls(**data_dict)
 
 
 class PredictionResult(BaseModel):
