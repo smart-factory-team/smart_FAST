@@ -9,7 +9,7 @@ class BackendClient:
     async def send_to_backend(self, data: Dict[str, Any], url: str) -> bool:
         async with httpx.AsyncClient(timeout=httpx.Timeout(settings.http_timeout)) as client:
             try:
-                response = await client.post(url, json=data)
+                response = await client.post(str(url), json=data)
                 response.raise_for_status()
                 logger.info("✅ 데이터 전송 성공: %s", response.status_code)
                 return True
