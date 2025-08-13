@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-import os
 
 from app.routers import simulator_router
-from app.config.settings import settings
 from app.utils.logger import system_log
 from app.routers.simulator_router import scheduler_service
 

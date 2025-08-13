@@ -1,5 +1,4 @@
 import asyncio
-import threading
 from typing import Optional
 from datetime import datetime
 
@@ -15,7 +14,6 @@ class SchedulerService:
 
     def __init__(self):
         self.is_running = False
-        self.thread: Optional[threading.Thread] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
 
         # 서비스 인스턴스들
