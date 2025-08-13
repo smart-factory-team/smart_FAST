@@ -2,7 +2,6 @@ import asyncio
 from typing import Any, Dict
 import aiohttp
 import pytest
-
 # Note on test framework:
 # These tests use pytest with pytest.mark.asyncio to validate async behavior without adding new dependencies.
 
@@ -119,7 +118,6 @@ def patch_sleep(monkeypatch):
 @pytest.fixture
 def patch_aiohttp_session(monkeypatch):
     # Patch aiohttp.ClientSession to return our DummySession
-    import aiohttp
 
     def _apply(session_factory):
         class FactorySession:
@@ -142,12 +140,7 @@ def patch_aiohttp_session(monkeypatch):
 @pytest.fixture
 def patch_settings(monkeypatch):
     # Patch URLs used by the service
-    monkeypatch.setattr(
-        settings_module.settings,
-        "PREDICTION_API_FULL_URL",
-        "http://example.test/predict",
-        raising=False,
-    )
+    
     monkeypatch.setattr(
         settings_module.settings,
         "PRESS_FAULT_MODEL_BASE_URL",
@@ -295,8 +288,6 @@ async def test_call_predict_api_client_connection_error_retries_then_none(
 
     class RaisingPost:
         async def __aenter__(self):
-            import aiohttp
-
             raise aiohttp.ClientConnectionError("connection failed")
 
         async def __aexit__(self, exc_type, exc, tb):
@@ -398,8 +389,6 @@ async def test_health_check_requests_exception_caught_returns_false(
 ):
     # The code catches requests.exceptions.RequestException despite using aiohttp.
     # We simulate that specific exception to ensure the except block is executed.
-    import requests
-    import aiohttp
 
     class RaisingGetSession:
         async def __aenter__(self):

@@ -119,7 +119,7 @@ def make_service(monkeypatch):
         # Patch settings and logs
         fake_settings = SimpleNamespace(
             SIMULATOR_INTERVAL_MINUTES=interval_minutes,
-            PREDICTION_API_FULL_URL="http://localhost/api/predict",
+            PREDICTION_API_FULL_URL="http://localhost/predict",
         )
         monkeypatch.setattr("app.services.scheduler_service.settings", fake_settings, raising=True)
 
