@@ -219,15 +219,9 @@ async def test_connect_failure_logs_and_returns_false():
 async def test_get_csv_files_list_filters_and_sorts_by_last_modified():
     now = datetime.now(timezone.utc)
     files = [
-        FakeBlobItem(
-            name="press/fault/a.csv", last_modified=now - timedelta(minutes=2)
-        ),
-        FakeBlobItem(
-            name="press/fault/b.csv", last_modified=now - timedelta(minutes=1)
-        ),
-        FakeBlobItem(
-            name="press/fault/sub/c.csv", last_modified=now
-        ),  # subfolder excluded
+        FakeBlobItem(name="press/fault/a.csv", last_modified=now - timedelta(minutes=2)),
+        FakeBlobItem(name="press/fault/b.csv", last_modified=now - timedelta(minutes=1)),
+        FakeBlobItem(name="press/fault/sub/c.csv", last_modified=now),  # subfolder excluded
         FakeBlobItem(name="press/fault/d.txt", last_modified=now),  # non-csv excluded
     ]
     service = _make_service_with_mocks(list_blobs=files)
@@ -246,7 +240,6 @@ async def test_get_csv_files_list_filters_and_sorts_by_last_modified():
 async def test_get_csv_files_list_exception_returns_empty_and_logs():
     # Make list_blobs raise when iterating by replacing container_client.list_blobs with one that raises
     service = _make_service_with_mocks()
-
     # Replace list_blobs with an iterator that raises
     async def _raiser(**kwargs):
         raise RuntimeError("list error")
@@ -264,16 +257,12 @@ async def test_get_csv_files_list_exception_returns_empty_and_logs():
         _cleanup_service_patches(service)
 
 
-async def test_load_csv_chunk_success_calls_pandas_with_skiprows_and_nrows(
-    df_required_cols,
-):
+async def test_load_csv_chunk_success_calls_pandas_with_skiprows_and_nrows(df_required_cols):
     csv_bytes = b"AI0_Vibration,AI1_Vibration,AI2_Current\n1,4,7\n2,5,8\n3,6,9\n"
     service = _make_service_with_mocks(download_blob_bytes=csv_bytes)
     try:
         # Arrange pd.read_csv to return a DataFrame with required columns
-        with patch.object(
-            pd, "read_csv", return_value=df_required_cols
-        ) as read_csv_mock:
+        with patch.object(pd, "read_csv", return_value=df_required_cols) as read_csv_mock:
             df = await service.load_csv_chunk_from_storage(
                 file_name="press/fault/a.csv", start_row=1200, num_rows=600
             )
@@ -329,9 +318,7 @@ async def test_load_csv_chunk_exception_returns_none_and_logs():
         _cleanup_service_patches(service)
 
 
-async def test_get_next_minute_data_happy_path_returns_chunk_and_updates_index(
-    df_required_cols,
-):
+async def test_get_next_minute_data_happy_path_returns_chunk_and_updates_index(df_required_cols):
     # Provide a chunk shorter than row_per_minute? For happy path (not end), make equal length
     chunk_len = 600
     df = pd.DataFrame(
@@ -341,11 +328,7 @@ async def test_get_next_minute_data_happy_path_returns_chunk_and_updates_index(
             "AI2_Current": list(range(chunk_len)),
         }
     )
-    files = [
-        FakeBlobItem(
-            name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc)
-        )
-    ]
+    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
     service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"dummy")
     try:
         with patch.object(pd, "read_csv", return_value=df):
@@ -378,11 +361,7 @@ async def test_get_next_minute_data_empty_chunk_path_raises_due_to_bug():
     empty_df = pd.DataFrame(
         {"AI0_Vibration": [], "AI1_Vibration": [], "AI2_Current": []}
     )
-    files = [
-        FakeBlobItem(
-            name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc)
-        )
-    ]
+    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
     service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"")
     try:
         with patch.object(pd, "read_csv", return_value=empty_df):
@@ -395,14 +374,8 @@ async def test_get_next_minute_data_empty_chunk_path_raises_due_to_bug():
 
 async def test_get_next_minute_data_none_chunk_returns_none(df_required_cols):
     # If load_csv_chunk_from_storage returns None, the method should return None and log an error
-    files = [
-        FakeBlobItem(
-            name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc)
-        )
-    ]
-    service = _make_service_with_mocks(
-        list_blobs=files, download_blob_bytes=b"irrelevant"
-    )
+    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
+    service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"irrelevant")
     try:
         with patch.object(pd, "read_csv", side_effect=ValueError("parse error")):
             # load_csv_chunk_from_storage will catch and return None

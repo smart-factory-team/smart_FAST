@@ -105,7 +105,6 @@ def patch_sleep(monkeypatch):
     # Speed up retries by replacing asyncio.sleep with a no-op that still yields control
     async def fast_sleep(_):
         await asyncio.sleep(0)  # one loop to maintain async semantics
-
     # To avoid recursion, patch to a coroutine that just returns None without calling itself
     async def no_sleep(_):
         return None
@@ -199,7 +198,6 @@ async def test_call_predict_api_invalid_response_returns_none(
         def post_side_effect(url, payload, headers):
             # Missing required fields to force a validation error
             return DummyResponse(200, {"unexpected": "data"})
-
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -225,7 +223,6 @@ async def test_call_predict_api_non_200_retries_then_returns_none(
             attempts.append(1)
             # Always return 500 with some text body
             return DummyResponse(500, None, "Internal Server Error")
-
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -264,7 +261,6 @@ async def test_call_predict_api_timeout_error_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
-
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -297,7 +293,6 @@ async def test_call_predict_api_client_connection_error_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
-
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -330,7 +325,6 @@ async def test_call_predict_api_unexpected_exception_retries_then_none(
         def post_side_effect(url, payload, headers):
             attempts.append(1)
             return RaisingPost()
-
         return DummySession(timeout=_timeout, post_side_effect=post_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -353,7 +347,6 @@ async def test_health_check_success_returns_true(patch_settings, patch_aiohttp_s
         def get_side_effect(url):
             assert url.endswith("/health")
             return DummyResponse(200, None, "healthy")
-
         return DummySession(timeout=_timeout, get_side_effect=get_side_effect)
 
     patch_aiohttp_session(session_factory)
@@ -365,14 +358,11 @@ async def test_health_check_success_returns_true(patch_settings, patch_aiohttp_s
 
 
 @pytest.mark.asyncio
-async def test_health_check_non_200_returns_false(
-    patch_settings, patch_aiohttp_session
-):
+async def test_health_check_non_200_returns_false(patch_settings, patch_aiohttp_session):
     # Arrange: GET /health returns 503
     def session_factory(_timeout):
         def get_side_effect(url):
             return DummyResponse(503, None, "unhealthy")
-
         return DummySession(timeout=_timeout, get_side_effect=get_side_effect)
 
     patch_aiohttp_session(session_factory)
