@@ -1,0 +1,37 @@
+# FastAPI 관련
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+
+# 비동기 HTTP 클라이언트
+aiohttp==3.12.15
+aiofiles==24.1.0
+
+# Azure Storage
+azure-storage-blob==12.26.0
+
+# 데이터 분석 및 머신러닝 (Python 3.12 호환 버전)
+pandas>=2.1.4
+numpy>=1.26.0
+scikit-learn>=1.3.2
+
+# 시각화 (선택적 - 혼동 행렬 등)
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# 설정 관리
+pydantic>=2.7.0
+pydantic-settings>=2.0.0
+python-dotenv==1.0.0
+
+# 로깅 및 유틸리티
+python-json-logger==2.0.7
+
+# SSL 인증서
+certifi>=2025.7.22
+
+# 개발 도구 (선택적)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
