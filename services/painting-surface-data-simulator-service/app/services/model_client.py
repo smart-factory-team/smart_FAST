@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Any, Optional, List
 from app.config.settings import settings
 from datetime import datetime
-
+from app.services.azure_storage import azure_storage
 
 class PaintingSurfaceModelClient:
     """도장 표면 결함탐지 전용 모델 클라이언트"""
@@ -104,7 +104,6 @@ class PaintingSurfaceModelClient:
         """Azure Storage에서 이미지 다운로드"""
         try:
             # azure_storage 서비스에서 이미지 데이터 읽기
-            from app.services.azure_storage import azure_storage
             image_data = await azure_storage.read_image_data(image_path)
             return image_data
         except Exception as e:

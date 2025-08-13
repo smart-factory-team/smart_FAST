@@ -136,10 +136,7 @@ class AzureStorageService:
             # 순차적으로 이미지 처리 (배치 크기만큼)
             batch_size = min(settings.batch_size, len(image_files))
             start_idx = self.image_index % len(image_files)
-            end_idx = start_idx + batch_size
-            
-            if end_idx > len(image_files):
-                end_idx = len(image_files)
+            end_idx = min(start_idx + batch_size, len(image_files))
             
             batch_files = image_files[start_idx:end_idx]
             self.image_index = (self.image_index + batch_size) % len(image_files)

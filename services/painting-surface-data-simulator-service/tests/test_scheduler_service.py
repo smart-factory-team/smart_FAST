@@ -36,7 +36,7 @@ class TestSimulatorScheduler:
         """스케줄러 시작 성공 테스트"""
         mock_settings.scheduler_interval_minutes = 1
         
-                # Mock 헬스 체크 성공
+        # Mock 헬스 체크 성공
         mock_model_client.health_check = AsyncMock(return_value=True)
 
         # Mock Azure Storage 연결
@@ -63,7 +63,7 @@ class TestSimulatorScheduler:
         # 이미 실행 중으로 설정
         self.scheduler.is_running = True
         
-                # Mock 헬스 체크 성공
+        # Mock 헬스 체크 성공
         mock_model_client.health_check = AsyncMock(return_value=True)
 
         # Mock Azure Storage 연결
