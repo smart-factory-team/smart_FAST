@@ -119,15 +119,22 @@ class AzureStorageService:
             system_log.error(f"CSV 청크 로드 실패 ({file_name}): {str(e)}")
             return None
 
-    async def get_next_minute_data(self) -> Optional[Tuple[pd.DataFrame, str, bool]]:
+    async def get_next_minute_data(self, _is_retry: bool = False) -> Optional[Tuple[pd.DataFrame, str, bool]]:
         """
         다음 1분치 데이터를 반환
+        Args:
+            _is_retry (bool): 재귀 호출 여부를 나타내는 내부 플래그
+
         Returns:
             Tuple[pd.DataFrame, str, bool]: 데이터, 파일명, 파일 끝 여부
             or None
         """
         # 현재 처리 중인 파일이 없으면 최신 파일 선택
         if self.current_file_name is None:
+            if _is_retry:
+                system_log.warning("재귀 호출에도 불구하고 처리할 새 파일을 찾지 못했습니다.")
+                return None
+
             csv_files = await self.get_csv_files_list()
             if not csv_files:
                 system_log.warning("CSV 파일이 없습니다.")
@@ -155,7 +162,7 @@ class AzureStorageService:
             system_log.info(f"파일 '{self.current_file_name}' 처리 완료")
             # 다음 파일로 이동
             self._move_to_next_file()
-            return await self.get_next_minute_data()  # 재귀 호출로 다음 파일 처리
+            return await self.get_next_minute_data(_is_retry=True)  # 재귀 호출로 다음 파일 처리
 
         # 다음 처리를 위해 인덱스 업데이트
         old_index = self.current_row_index

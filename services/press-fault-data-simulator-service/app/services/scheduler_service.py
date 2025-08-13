@@ -98,11 +98,16 @@ class SchedulerService:
                 await self._run_single_simulation()
                 # 설정된 간격만큼 대기 (분 단위를 초로 변환)
                 interval_seconds = settings.SIMULATOR_INTERVAL_MINUTES * 60
-                # 종료 신호를 확인하면서 대기
-                for _ in range(interval_seconds):
-                    if not self.is_running:
-                        break
-                    await asyncio.sleep(1.0)  # 1초마다 체크
+                
+                if interval_seconds > 0:
+                    # 종료 신호를 확인하면서 대기
+                    for _ in range(interval_seconds):
+                        if not self.is_running:
+                            break
+                        await asyncio.sleep(1.0)  # 1초마다 체크
+                else:
+                    # 간격이 0이어도 이벤트 루프에 제어권을 넘겨 다른 작업이 실행되도록 함
+                    await asyncio.sleep(0)
 
             except asyncio.CancelledError:
                 system_log.info("시뮬레이션 루프 취소됨")
