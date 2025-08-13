@@ -31,3 +31,21 @@ async def root():
         "version": "1.0.0",
         "description": "유압 펌프 고장 예측 시뮬레이터 서비스",
     }
+
+
+@app.get("/health")
+async def health():
+    """헬스 체크 엔드포인트"""
+    return {"status": "healthy"}
+
+
+@app.get("/ready")
+async def ready():
+    """준비 상태 체크 엔드포인트"""
+    return {"status": "ready"}
+
+
+@app.get("/startup")
+async def startup():
+    """시작 상태 체크 엔드포인트"""
+    return {"status": "started"}
