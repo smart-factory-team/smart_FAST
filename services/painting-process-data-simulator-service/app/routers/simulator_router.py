@@ -1,26 +1,15 @@
 from fastapi import APIRouter, HTTPException
-from app.services.model_client import model_client
 from app.services.scheduler_service import simulator_scheduler
-from app.config.settings import settings
-
-import os
-import json
 
 router = APIRouter()
-
 
 @router.get("/status")
 async def get_simulator_status():
     """시뮬레이터 상태 조회"""
-    status = simulator_scheduler.get_status()
-
-    # 모델 서비스 헬스 체크 추가
-    if simulator_scheduler.is_running:
-        health_status = await model_client.health_check_all()
-        status["model_services_health"] = health_status
-
+    status = simulator_scheduler.get_status()  
+    # 내부 URL 노출 방지  
+    status.pop("backend_service_url", None)  
     return status
-
 
 @router.post("/start")
 async def start_simulator():
@@ -34,7 +23,6 @@ async def start_simulator():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"시뮬레이터 시작 실패: {str(e)}") from e
 
-
 @router.post("/stop")
 async def stop_simulator():
     """시뮬레이션 중지"""
@@ -44,36 +32,6 @@ async def stop_simulator():
             "message": "시뮬레이터가 중지되었습니다.",
             "status": simulator_scheduler.get_status()
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"시뮬레이터 중지 실패: {str(e)}") from e
-
-
-@router.get("/logs/recent")
-async def get_recent_logs():
-    """최근 로그 조회"""
-    try:
-        log_file_path = os.path.join(
-            settings.log_directory, settings.log_filename)
-
-        if not os.path.exists(log_file_path):
-            return {"logs": [], "message": "로그 파일이 없습니다."}
-
-        # 최근 10개 로그만 반환
-        logs = []
-        total_lines = 0
-        with open(log_file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            total_lines = len(lines)
-            for line in lines[-10:]:  # 최근 10개
-                try:
-                    logs.append(json.loads(line.strip()))
-                except json.JSONDecodeError:
-                    continue
-
-        return {
-            "logs": logs,
-            "total_count": total_lines
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"로그 조회 실패: {str(e)}") from e
+    except Exception as e:  
+        logger.exception("시뮬레이터 중지 실패")  
+        raise HTTPException(status_code=500, detail="시뮬레이터 중지 실패") from e
