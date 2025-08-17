@@ -3,10 +3,11 @@ from typing import Optional
 from datetime import datetime
 
 from app.services.azure_storage_service import AzureStorageService
-from app.services.prediction_api_service import PredictAPIService
+# from app.services.prediction_api_service import PredictAPIService
+from app.services.spring_boot_service import SpringBootService
 from app.models.data_models import PredictionRequest
 from app.config.settings import settings
-from app.utils.logger import system_log, prediction_log
+from app.utils.logger import system_log
 
 
 class SchedulerService:
@@ -18,12 +19,16 @@ class SchedulerService:
 
         # 서비스 인스턴스들
         self.storage_service = AzureStorageService()
-        self.api_service = PredictAPIService()
+        # self.api_service = PredictAPIService()
+        self.spring_boot_service = SpringBootService()
 
         # 통계
-        self.total_predictions = 0
-        self.fault_detections = 0
+        # self.total_predictions = 0
+        # self.fault_detections = 0
         self.start_time: Optional[datetime] = None
+
+        self.total_transmissions = 0
+        self.successful_transmissions = 0 
 
     async def start_simulation(self) -> bool:
         """시뮬레이션 시작!"""
@@ -34,11 +39,11 @@ class SchedulerService:
 
         system_log.info("🚀 시뮬레이션 시작 중...")
 
-        # API 서버 상태 확인
-        if not await self.api_service.health_check():
-            system_log.error("API 서버 연결 실패. 시뮬레이션을 시작할 수 없습니다.")
+        # Spring Boot 서버 상태 확인
+        if not await self.spring_boot_service.health_check():
+            system_log.error("Spring Boot 서버 연결 실패. 시뮬레이션을 시작할 수 없습니다.")
             return False
-
+        
         # Azure Storage 연결 확인
         if not await self.storage_service.connect():
             system_log.error("Azure Storage 연결 실패.")
@@ -46,8 +51,10 @@ class SchedulerService:
 
         self.is_running = True
         self.start_time = datetime.now()
-        self.total_predictions = 0
-        self.fault_detections = 0
+        # self.total_predictions = 0
+        # self.fault_detections = 0
+        self.total_transmissions = 0
+        self.successful_transmissions = 0
 
         self.loop = asyncio.get_event_loop()
         self.task = self.loop.create_task(self._run_simulation_loop())
@@ -55,7 +62,7 @@ class SchedulerService:
         system_log.info(
             f"✅ 시뮬레이션 시작됨 - 간격: {settings.SIMULATOR_INTERVAL_MINUTES}분"
         )
-        system_log.info(f"📊 API URL: {settings.PREDICTION_API_FULL_URL}")
+        system_log.info(f"📊 Spring Boot URL: {settings.SPRING_BOOT_BASE_URL}")
 
         return True
 
@@ -83,7 +90,7 @@ class SchedulerService:
         if self.start_time:
             duration = datetime.now() - self.start_time
             system_log.info(f"실행 시간: {duration}")
-            system_log.info(f"총 예측 횟수: {self.total_predictions}")
+            system_log.info(f"   └─ 총 전송 횟수: {self.total_transmissions}")
 
         system_log.info("✅ 시뮬레이션 종료 완료")
         return True
@@ -131,24 +138,25 @@ class SchedulerService:
 
             minute_data, file_name, is_end_of_file = data_result
 
-            # 2. 예측  요청 데이터 생성
-            prediction_request = PredictionRequest.from_csv_data(minute_data)
-            # 3. API 호출
-            prediction_result = await self.api_service.call_predict_api(
-                prediction_request
+            # 2. Spring Boot 전송용 데이터 생성
+            sensor_data_request = PredictionRequest.from_csv_data(minute_data)
+            # 3. Spring Boot로 데이터 전송
+            transmission_success = await self.spring_boot_service.send_sensor_data(
+                sensor_data_request,
+                data_source=file_name
             )
 
-            if prediction_result is None:
-                system_log.error("API 호출 실패")
+            if not transmission_success:
+                system_log.error("Spring Boot 데이터 전송 실패")
                 return False
 
-            # 4. 결과 로그 처리
-            self._handle_prediction_result(prediction_result, file_name)
-
+            # 4. 전송 성공 로그 
+            system_log.info(f"✅ 데이터 전송 성공 - Source: {file_name}, "
+                        f"Size: {len(minute_data)}행")
             # 5. 통계 업데이트
-            self.total_predictions += 1
-            if prediction_result.is_fault:
-                self.fault_detections += 1
+            self.total_transmissions += 1
+            if transmission_success:
+                self.successful_transmissions += 1
 
             if is_end_of_file:
                 system_log.info(f"파일 '{file_name}' 처리 완료")
@@ -159,7 +167,7 @@ class SchedulerService:
             system_log.error(f"시뮬레이션 실행 오류: {str(e)}")
             return False
 
-    def _handle_prediction_result(self, result, data_source: str):
+    # def _handle_prediction_result(self, result, data_source: str):
         """예측 결과 처리 (로그 기록)"""
         status = "FAULT DETECTED" if result.is_fault else "✅ NORMAL"
 
@@ -200,10 +208,10 @@ class SchedulerService:
             "is_running": True,
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "runtime": runtime,
-            "total_predictions": self.total_predictions,
-            "fault_detections": self.fault_detections,
+            "total_transmissions": self.total_transmissions,
+            "successful_transmissions": self.successful_transmissions,
             "interval_minutes": settings.SIMULATOR_INTERVAL_MINUTES,
-            "api_url": settings.PREDICTION_API_FULL_URL,
+            "api_url": settings.SPRING_BOOT_BASE_URL,
             "storage_status": storage_status,
         }
 
