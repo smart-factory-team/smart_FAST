@@ -59,6 +59,7 @@ spec:
               memory: "512Mi"     # 128Mi → 512Mi (실제 사용량 맞춤)
               cpu: "50m"          # 100m → 50m (CPU 충분)
               ephemeral-storage: "256Mi"
+              
             limits:
               memory: "600Mi"     # 512Mi → 600Mi (약간 여유)
               cpu: "200m"
@@ -125,3 +126,4 @@ spec:
         - name: hf-cache
           emptyDir:
             sizeLimit: 1Gi  # HuggingFace 캐시용
+
