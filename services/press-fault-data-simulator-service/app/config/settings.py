@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ERROR_LOG_FILE_PATH: str = "./logs/press_fault_errors.json"
 
     # Azure Storage 설정
-    AZURE_STORAGE_CONNECTION_STRING: str
+    AZURE_CONNECTION_STRING: str
     AZURE_STORAGE_CONTAINER_NAME: str = "simulator-data"
     PRESS_FAULT_FOLDER: str = "press-fault-hydraulic-pump"
 

@@ -21,6 +21,7 @@ if str(SERVICE_ROOT) not in sys.path:
 
 MODULE_UNDER_TEST = None
 
+
 def _clear_logger(name: str):
     logger = logging.getLogger(name)
     logger.propagate = False
@@ -34,6 +35,7 @@ def _clear_logger(name: str):
     logger.handlers = []
     return logger
 
+
 @pytest.fixture(autouse=True)
 def isolate_logging():
     # Ensure clean state for "system" and "prediction" loggers
@@ -42,6 +44,7 @@ def isolate_logging():
     yield
     _clear_logger("system")
     _clear_logger("prediction")
+
 
 @pytest.fixture
 def fake_settings(tmp_path, monkeypatch):
@@ -53,7 +56,7 @@ def fake_settings(tmp_path, monkeypatch):
     Also set required environment variables so app.config.settings can import without ValidationError.
     """
     # Ensure required env var for Settings() exists
-    monkeypatch.setenv("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true")
+    monkeypatch.setenv("AZURE_CONNECTION_STRING", "UseDevelopmentStorage=true")
 
     log_dir = tmp_path / "logs"
     error_log = log_dir / "errors.log"
@@ -70,6 +73,7 @@ def fake_settings(tmp_path, monkeypatch):
 
     return _S()
 
+
 def import_logger_module(monkeypatch, fake_settings):
     """
     Import the logger module after ensuring settings are patched.
@@ -83,6 +87,7 @@ def import_logger_module(monkeypatch, fake_settings):
     MODULE_UNDER_TEST = importlib.import_module("app.utils.logger")
     return MODULE_UNDER_TEST
 
+
 def test_level_based_formatter_formats_simple_for_info(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
     fmt = mod.LevelBasedFormatter()
@@ -93,6 +98,7 @@ def test_level_based_formatter_formats_simple_for_info(monkeypatch, fake_setting
     )
     out = fmt.format(rec)
     assert out == "✅ [INFO] Normal operation"
+
 
 def test_level_based_formatter_formats_detailed_for_warning_and_above(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
@@ -112,6 +118,7 @@ def test_level_based_formatter_formats_detailed_for_warning_and_above(monkeypatc
     assert out_warn == "🚨 [WARNING]:\n   └─ Anomaly detected"
     assert out_err == "🚨 [ERROR]:\n   └─ Critical failure"
 
+
 def _build_stream_logger(name: str, formatter: logging.Formatter):
     logger = _clear_logger(name)
     logger.setLevel(logging.DEBUG)
@@ -121,9 +128,11 @@ def _build_stream_logger(name: str, formatter: logging.Formatter):
     logger.addHandler(sh)
     return logger, stream
 
+
 def test_custom_json_formatter_adds_timestamp_and_service_name(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
-    formatter = mod.CustomJsonFormatter("%(timestamp)s %(service_name)s %(message)s")
+    formatter = mod.CustomJsonFormatter(
+        "%(timestamp)s %(service_name)s %(message)s")
 
     logger, stream = _build_stream_logger("prediction", formatter)
     logger.warning("json event")
@@ -136,9 +145,11 @@ def test_custom_json_formatter_adds_timestamp_and_service_name(monkeypatch, fake
     assert isinstance(data["timestamp"], str) and "T" in data["timestamp"]
     assert data["message"] == "json event"
 
+
 def test_custom_json_formatter_preserves_existing_timestamp(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
-    formatter = mod.CustomJsonFormatter("%(timestamp)s %(service_name)s %(message)s")
+    formatter = mod.CustomJsonFormatter(
+        "%(timestamp)s %(service_name)s %(message)s")
 
     logger, stream = _build_stream_logger("prediction", formatter)
     logger.warning("has ts", extra={"timestamp": "preserved-ts"})
@@ -148,6 +159,7 @@ def test_custom_json_formatter_preserves_existing_timestamp(monkeypatch, fake_se
     assert data["timestamp"] == "preserved-ts"
     assert data["service_name"] == "press fault detection"
     assert data["message"] == "has ts"
+
 
 def test_setup_loggers_creates_log_dir_and_configures_handlers(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
@@ -164,14 +176,17 @@ def test_setup_loggers_creates_log_dir_and_configures_handlers(monkeypatch, fake
     mod.setup_loggers()
 
     # Verify directory creation
-    assert os.path.isdir(fake_settings.LOG_DIR), "LOG_DIR should be created by setup_loggers"
+    assert os.path.isdir(
+        fake_settings.LOG_DIR), "LOG_DIR should be created by setup_loggers"
 
     # Validate system logger configuration
     system_logger = logging.getLogger("system")
-    assert system_logger.level == getattr(logging, fake_settings.LOG_LEVEL.upper())
+    assert system_logger.level == getattr(
+        logging, fake_settings.LOG_LEVEL.upper())
     assert system_logger.propagate is False
     assert len(system_logger.handlers) >= 1
-    sys_stream_handlers = [h for h in system_logger.handlers if isinstance(h, logging.StreamHandler)]
+    sys_stream_handlers = [
+        h for h in system_logger.handlers if isinstance(h, logging.StreamHandler)]
     assert sys_stream_handlers, "System logger should have a StreamHandler"
     # Emit a message and ensure it goes to our fake stdout
     system_logger.info("system configured")
@@ -179,22 +194,28 @@ def test_setup_loggers_creates_log_dir_and_configures_handlers(monkeypatch, fake
 
     # Validate prediction logger configuration
     prediction_logger = logging.getLogger("prediction")
-    assert prediction_logger.level == getattr(logging, fake_settings.LOG_LEVEL.upper())
+    assert prediction_logger.level == getattr(
+        logging, fake_settings.LOG_LEVEL.upper())
     assert prediction_logger.propagate is False
-    assert len(prediction_logger.handlers) >= 2, "Prediction logger should have console and file handlers"
+    assert len(
+        prediction_logger.handlers) >= 2, "Prediction logger should have console and file handlers"
 
     # One handler should be StreamHandler with LevelBasedFormatter
-    stream_handlers = [h for h in prediction_logger.handlers if isinstance(h, logging.StreamHandler)]
+    stream_handlers = [h for h in prediction_logger.handlers if isinstance(
+        h, logging.StreamHandler)]
     assert stream_handlers, "Prediction logger should have a StreamHandler"
-    assert any(isinstance(h.formatter, mod.LevelBasedFormatter) for h in stream_handlers)
+    assert any(isinstance(h.formatter, mod.LevelBasedFormatter)
+               for h in stream_handlers)
 
     # One handler should be TimedRotatingFileHandler with CustomJsonFormatter and WARNING level
     from logging.handlers import TimedRotatingFileHandler
-    file_handlers = [h for h in prediction_logger.handlers if isinstance(h, TimedRotatingFileHandler)]
+    file_handlers = [h for h in prediction_logger.handlers if isinstance(
+        h, TimedRotatingFileHandler)]
     assert file_handlers, "Prediction logger should have a TimedRotatingFileHandler"
     fh = file_handlers[0]
     assert isinstance(fh.formatter, mod.CustomJsonFormatter)
     assert fh.level == logging.WARNING
+
 
 def test_prediction_file_handler_writes_only_warning_and_above(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
@@ -221,9 +242,11 @@ def test_prediction_file_handler_writes_only_warning_and_above(monkeypatch, fake
             h.flush()
 
     # Read and parse the file (json lines)
-    assert os.path.isfile(fake_settings.ERROR_LOG_FILE_PATH), "Error log file must be created"
+    assert os.path.isfile(
+        fake_settings.ERROR_LOG_FILE_PATH), "Error log file must be created"
     with open(fake_settings.ERROR_LOG_FILE_PATH, "r", encoding="utf-8") as f:
-        lines = [json.loads(line) for line in f.read().splitlines() if line.strip()]
+        lines = [json.loads(line)
+                 for line in f.read().splitlines() if line.strip()]
 
     messages = [entry.get("message") for entry in lines]
     assert "warning should be in file" in messages
@@ -233,6 +256,7 @@ def test_prediction_file_handler_writes_only_warning_and_above(monkeypatch, fake
     for rec in lines:
         assert rec.get("service_name") == "press fault detection"
         assert isinstance(rec.get("timestamp"), str)
+
 
 def test_system_logger_message_format_includes_timestamp_and_level(monkeypatch, fake_settings):
     mod = import_logger_module(monkeypatch, fake_settings)
