@@ -98,7 +98,7 @@ spec:
           resources:
             requests:
               memory: "128Mi"     # 256Mi → 128Mi
-              cpu: "100m"         # 250m → 100m  
+              cpu: "50m"          # 100m → 50m (CPU 부족 문제 해결)
               ephemeral-storage: "256Mi"  # 1Gi → 256Mi
             limits:
               memory: "512Mi"     # 1Gi → 512Mi
