@@ -12,7 +12,7 @@ class AzureStorageService:
 
     def __init__(self):
         self.blob_service_client = BlobServiceClient.from_connection_string(
-            settings.AZURE_STORAGE_CONNECTION_STRING
+            settings.AZURE_CONNECTION_STRING
         )
         self.container_name = settings.AZURE_STORAGE_CONTAINER_NAME
         self.folder_path = settings.PRESS_FAULT_FOLDER.rstrip("/") + "/"
@@ -66,7 +66,7 @@ class AzureStorageService:
             ):
                 if blob.name.lower().endswith(".csv"):
                     # 하위 폴더는 제외 (현재 폴더의 파일만)
-                    relative_path = blob.name[len(self.folder_path) :]
+                    relative_path = blob.name[len(self.folder_path):]
                     if "/" not in relative_path:
                         csv_files.append((blob.name, blob.last_modified))
             # 최신순으로 정렬하여 파일명만 반환
@@ -106,8 +106,10 @@ class AzureStorageService:
                 StringIO(csv_text), skiprows=range(1, start_row + 1), nrows=num_rows
             )
             # 필수 컬럼 확인
-            required_columns = ["AI0_Vibration", "AI1_Vibration", "AI2_Current"]
-            missing_columns = [col for col in required_columns if col not in df.columns]
+            required_columns = ["AI0_Vibration",
+                                "AI1_Vibration", "AI2_Current"]
+            missing_columns = [
+                col for col in required_columns if col not in df.columns]
 
             if missing_columns:
                 system_log.error(f"필수 컬럼 누락: {missing_columns}")
@@ -162,7 +164,8 @@ class AzureStorageService:
             system_log.info(f"파일 '{self.current_file_name}' 처리 완료")
             # 다음 파일로 이동
             self._move_to_next_file()
-            return await self.get_next_minute_data(_is_retry=True)  # 재귀 호출로 다음 파일 처리
+            # 재귀 호출로 다음 파일 처리
+            return await self.get_next_minute_data(_is_retry=True)
 
         # 다음 처리를 위해 인덱스 업데이트
         old_index = self.current_row_index

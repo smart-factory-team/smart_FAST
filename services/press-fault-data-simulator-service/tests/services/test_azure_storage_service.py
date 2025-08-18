@@ -80,7 +80,8 @@ def _make_service_with_mocks(
             side_effect=get_container_properties_raises
         )
     else:
-        container_client_mock.get_container_properties = AsyncMock(return_value=None)
+        container_client_mock.get_container_properties = AsyncMock(
+            return_value=None)
 
     # get_csv_files_list path
     if list_blobs is not None:
@@ -93,7 +94,8 @@ def _make_service_with_mocks(
     download_stream_mock.readall = AsyncMock(
         return_value=download_blob_bytes if download_blob_bytes is not None else b""
     )
-    blob_client_mock.download_blob = AsyncMock(return_value=download_stream_mock)
+    blob_client_mock.download_blob = AsyncMock(
+        return_value=download_stream_mock)
 
     blob_service_client_mock.get_container_client.return_value = container_client_mock
     blob_service_client_mock.get_blob_client.return_value = blob_client_mock
@@ -101,7 +103,7 @@ def _make_service_with_mocks(
 
     # settings and logger patches
     settings_stub = SimpleNamespace(
-        AZURE_STORAGE_CONNECTION_STRING="UseDevelopmentStorage=true",
+        AZURE_CONNECTION_STRING="UseDevelopmentStorage=true",
         AZURE_STORAGE_CONTAINER_NAME="test-container",
         PRESS_FAULT_FOLDER="press/fault",
     )
@@ -157,7 +159,8 @@ def _make_service_with_mocks(
         container_client=container_client_mock,
         blob_client=blob_client_mock,
         logger=logger_mock,
-        read_csv=active_patches[-1],  # The last patch corresponds to pd.read_csv
+        # The last patch corresponds to pd.read_csv
+        read_csv=active_patches[-1],
         patches=patches,
         active_patches=active_patches,
     )
@@ -192,7 +195,8 @@ async def test_connect_success():
             "test-container"
         )
         service.__test_mocks__.container_client.get_container_properties.assert_awaited()
-        service.__test_mocks__.logger.info.assert_any_call("Azure Storage 연결 성공")
+        service.__test_mocks__.logger.info.assert_any_call(
+            "Azure Storage 연결 성공")
     finally:
         await service.close()
         _cleanup_service_patches(service)
@@ -219,10 +223,14 @@ async def test_connect_failure_logs_and_returns_false():
 async def test_get_csv_files_list_filters_and_sorts_by_last_modified():
     now = datetime.now(timezone.utc)
     files = [
-        FakeBlobItem(name="press/fault/a.csv", last_modified=now - timedelta(minutes=2)),
-        FakeBlobItem(name="press/fault/b.csv", last_modified=now - timedelta(minutes=1)),
-        FakeBlobItem(name="press/fault/sub/c.csv", last_modified=now),  # subfolder excluded
-        FakeBlobItem(name="press/fault/d.txt", last_modified=now),  # non-csv excluded
+        FakeBlobItem(name="press/fault/a.csv",
+                     last_modified=now - timedelta(minutes=2)),
+        FakeBlobItem(name="press/fault/b.csv",
+                     last_modified=now - timedelta(minutes=1)),
+        FakeBlobItem(name="press/fault/sub/c.csv",
+                     last_modified=now),  # subfolder excluded
+        FakeBlobItem(name="press/fault/d.txt",
+                     last_modified=now),  # non-csv excluded
     ]
     service = _make_service_with_mocks(list_blobs=files)
     try:
@@ -241,6 +249,7 @@ async def test_get_csv_files_list_exception_returns_empty_and_logs():
     # Make list_blobs raise when iterating by replacing container_client.list_blobs with one that raises
     service = _make_service_with_mocks()
     # Replace list_blobs with an iterator that raises
+
     async def _raiser(**kwargs):
         raise RuntimeError("list error")
 
@@ -328,8 +337,10 @@ async def test_get_next_minute_data_happy_path_returns_chunk_and_updates_index(d
             "AI2_Current": list(range(chunk_len)),
         }
     )
-    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
-    service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"dummy")
+    files = [FakeBlobItem(name="press/fault/latest.csv",
+                          last_modified=datetime.now(timezone.utc))]
+    service = _make_service_with_mocks(
+        list_blobs=files, download_blob_bytes=b"dummy")
     try:
         with patch.object(pd, "read_csv", return_value=df):
             result = await service.get_next_minute_data()
@@ -361,8 +372,10 @@ async def test_get_next_minute_data_empty_chunk_path_raises_due_to_bug():
     empty_df = pd.DataFrame(
         {"AI0_Vibration": [], "AI1_Vibration": [], "AI2_Current": []}
     )
-    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
-    service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"")
+    files = [FakeBlobItem(name="press/fault/latest.csv",
+                          last_modified=datetime.now(timezone.utc))]
+    service = _make_service_with_mocks(
+        list_blobs=files, download_blob_bytes=b"")
     try:
         with patch.object(pd, "read_csv", return_value=empty_df):
             # This is expected to raise because the code calls self.get_next_chunk(), which doesn't exist.
@@ -374,8 +387,10 @@ async def test_get_next_minute_data_empty_chunk_path_raises_due_to_bug():
 
 async def test_get_next_minute_data_none_chunk_returns_none(df_required_cols):
     # If load_csv_chunk_from_storage returns None, the method should return None and log an error
-    files = [FakeBlobItem(name="press/fault/latest.csv", last_modified=datetime.now(timezone.utc))]
-    service = _make_service_with_mocks(list_blobs=files, download_blob_bytes=b"irrelevant")
+    files = [FakeBlobItem(name="press/fault/latest.csv",
+                          last_modified=datetime.now(timezone.utc))]
+    service = _make_service_with_mocks(
+        list_blobs=files, download_blob_bytes=b"irrelevant")
     try:
         with patch.object(pd, "read_csv", side_effect=ValueError("parse error")):
             # load_csv_chunk_from_storage will catch and return None
