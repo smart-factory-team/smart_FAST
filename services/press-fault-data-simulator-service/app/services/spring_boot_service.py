@@ -94,7 +94,7 @@ class SpringBootService:
         """
         try:
             # Spring Boot 기본 루트 경로로 간단한 연결 테스트
-            base_url = str(settings.SPRING_BOOT_BASE_URL)
+            base_url = f"{settings.SPRING_BOOT_BASE_URL}/pressFaultDetectionLogs"
             
             timeout = aiohttp.ClientTimeout(total=10)
             async with aiohttp.ClientSession(timeout=timeout) as session:

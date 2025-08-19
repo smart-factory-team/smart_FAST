@@ -63,7 +63,6 @@ class SchedulerService:
         system_log.info(
             f"✅ 시뮬레이션 시작됨 - 간격: {settings.SIMULATOR_INTERVAL_MINUTES}분"
         )
-        system_log.info(f"📊 Spring Boot URL: {settings.SPRING_BOOT_BASE_URL}")
 
         return True
 
@@ -212,7 +211,6 @@ class SchedulerService:
             "total_transmissions": self.total_transmissions,
             "successful_transmissions": self.successful_transmissions,
             "interval_minutes": settings.SIMULATOR_INTERVAL_MINUTES,
-            "api_url": settings.SPRING_BOOT_BASE_URL,
             "storage_status": storage_status,
         }
 

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     PRESS_FAULT_MODEL_BASE_URL: str = "http://127.0.0.1:8004"
     PREDICT_API_ENDPOINT: str = "/predict"
     # Spring Boot 서버 설정
-    SPRING_BOOT_BASE_URL: str = "http://localhost:8085"
+    SPRING_BOOT_BASE_URL: str = "http://localhost:8088"
 
     SIMULATOR_INTERVAL_MINUTES: int = 1
 
