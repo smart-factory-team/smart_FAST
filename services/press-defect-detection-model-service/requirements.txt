@@ -1,0 +1,68 @@
+# Core serving dependencies
+fastapi==0.110.0
+uvicorn==0.29.0
+ultralytics==8.3.169
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+python-multipart==0.0.9
+pandas==2.2.2
+python-dotenv==1.0.1
+requests==2.31.0
+torch==2.1.0
+Pillow==10.2.0
+
+# HF 관련 (모델 로딩용 - 필수)
+transformers==4.37.2
+accelerate==0.27.2
+huggingface_hub==0.20.3
+
+# Testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# # FastAPI and Web Framework
+# fastapi==0.104.1
+# uvicorn[standard]==0.24.0
+# python-multipart==0.0.6          # For file uploads
+# pydantic==2.5.0                  # Data validation
+
+# # Deep Learning and Computer Vision
+# torch==2.1.1                     # PyTorch (CPU version, GPU version available)
+# torchvision==0.16.1              # PyTorch vision utilities
+# opencv-python==4.8.1.78          # OpenCV for image processing
+# Pillow==10.1.0                   # Python Imaging Library
+# numpy==1.24.4                    # Numerical computing
+
+# # YOLOv7 Dependencies
+# scipy==1.11.4                    # Scientific computing
+# matplotlib==3.8.2                # Plotting (for visualization if needed)
+# seaborn==0.13.0                  # Statistical plotting
+# pandas==2.1.4                    # Data manipulation
+# PyYAML==6.0.1                    # YAML configuration files
+
+# # HTTP and API utilities
+# requests==2.31.0                 # HTTP requests
+# httpx==0.25.2                    # Async HTTP client
+# aiofiles==23.2.1                 # Async file operations
+
+# # Logging and Monitoring
+# loguru==0.7.2                    # Advanced logging
+# prometheus-client==0.19.0        # Metrics collection
+# psutil==5.9.6                    # System monitoring
+
+# # Development and Testing
+# pytest==7.4.3                    # Testing framework
+# pytest-asyncio==0.21.1           # Async testing
+# black==23.11.0                   # Code formatting
+# isort==5.12.0                    # Import sorting
+# flake8==6.1.0                    # Code linting
+
+# # Optional: GPU Support (uncomment if using GPU)
+# # torch==2.1.1+cu118              # PyTorch with CUDA 11.8
+# # torchvision==0.16.1+cu118       # Torchvision with CUDA 11.8
+
+# # Optional: Advanced Features
+# # redis==5.0.1                    # Caching (if needed)
+# # celery==5.3.4                   # Task queue (for async processing)
+# # gunicorn==21.2.0                # Production WSGI server
