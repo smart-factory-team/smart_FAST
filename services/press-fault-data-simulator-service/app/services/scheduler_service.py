@@ -39,6 +39,7 @@ class SchedulerService:
 
         system_log.info("🚀 시뮬레이션 시작 중...")
 
+        await self.storage_service.reset_connection()
         # Spring Boot 서버 상태 확인
         if not await self.spring_boot_service.health_check():
             system_log.error("Spring Boot 서버 연결 실패. 시뮬레이션을 시작할 수 없습니다.")
