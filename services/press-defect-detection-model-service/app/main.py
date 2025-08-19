@@ -6,8 +6,10 @@ import logging
 from datetime import datetime
 import asyncio
 
-# 모델 import 추가
+# 모델 및 서비스 import 수정
 from press_models.yolo_model import YOLOv7Model
+from services.inference import InferenceService
+from routers.predict import router as predict_router, set_inference_service
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +33,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 전역 변수 - 모델 인스턴스
+# 라우터 등록
+app.include_router(predict_router)
+
+# 전역 변수 - 모델 및 서비스 인스턴스
 yolo_model = YOLOv7Model()
+inference_service = None
 model_loaded = False
 model_loading_error = None
 service_start_time = datetime.now()
@@ -41,16 +47,23 @@ service_start_time = datetime.now()
 @app.on_event("startup")
 async def startup_event():
     """서비스 시작 시 실행되는 함수"""
-    global model_loaded, model_loading_error, yolo_model
+    global model_loaded, model_loading_error, yolo_model, inference_service
     
     logger.info("🚀 Press Defect Detection API 서비스 시작")
     logger.info("⏳ AI 모델 로딩 중...")
     
     try:
-        # 실제 모델 로딩
+        # YOLO 모델 로딩
         await yolo_model.load_model()
+        
+        # 추론 서비스 초기화
+        inference_service = InferenceService(yolo_model)
+        
+        # 라우터에 추론 서비스 설정
+        set_inference_service(inference_service)
+        
         model_loaded = True
-        logger.info("✅ AI 모델 로딩 완료")
+        logger.info("✅ AI 모델 및 추론 서비스 로딩 완료")
         
     except Exception as e:
         model_loading_error = str(e)
@@ -64,6 +77,7 @@ async def shutdown_event():
     logger.info("🛑 Press Defect Detection API 서비스 종료")
 
 # 기본 엔드포인트들
+
 @app.get("/")
 async def root():
     """서비스 정보 반환"""
@@ -159,29 +173,15 @@ async def model_info():
         "timestamp": datetime.now().isoformat()
     }
 
-# 임시 예측 엔드포인트 (다음 단계에서 실제 구현)
-@app.post("/predict")
-async def predict():
-    """AI 모델 예측 (임시)"""
-    if not model_loaded:
-        raise HTTPException(status_code=503, detail="모델이 아직 로딩되지 않았습니다.")
-    
-    return {
-        "message": "예측 기능은 다음 단계에서 구현됩니다.",
-        "status": "placeholder",
-        "model_ready": True,
-        "timestamp": datetime.now().isoformat()
-    }
+# 임시 예측 엔드포인트 제거 (라우터로 이동)
+# @app.post("/predict") 및 @app.post("/predict/file") 삭제됨
 
-@app.post("/predict/file")
-async def predict_file():
-    """파일 업로드를 통한 예측 (임시)"""
-    if not model_loaded:
-        raise HTTPException(status_code=503, detail="모델이 아직 로딩되지 않았습니다.")
-    
-    return {
-        "message": "파일 업로드 예측 기능은 다음 단계에서 구현됩니다.",
-        "status": "placeholder",
-        "model_ready": True,
-        "timestamp": datetime.now().isoformat()
-    }
+# 개발 서버 실행
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )
