@@ -6,6 +6,7 @@ import tempfile
 import os
 import logging
 from datetime import datetime
+from starlette.concurrency import run_in_threadpool
 
 from services.inference import InferenceService
 
@@ -77,9 +78,10 @@ async def predict_single_image(request: SingleImageRequest):
         raise HTTPException(status_code=503, detail="추론 서비스가 준비되지 않았습니다.")
     
     try:
-        result = inference_service.predict_single_image(
-            image_input=request.image_base64,
-            input_type="base64"
+        result = await run_in_threadpool(
+            inference_service.predict_single_image,
+            request.image_base64,
+            "base64",
         )
         
         if result['success']:
@@ -112,7 +114,10 @@ async def predict_multi_images(request: MultiImageRequest):
                 "name": img_data.get("name", f"image_{idx}")
             })
         
-        result = inference_service.predict_multiple_images(image_inputs)
+        result = await run_in_threadpool(
+            inference_service.predict_multiple_images,
+            image_inputs,
+        )
         
         if result['success']:
             return JSONResponse(content=result)
@@ -145,9 +150,10 @@ async def predict_inspection_batch(request: InspectionBatchRequest):
                 "name": img_data.get("name", f"cam_{idx}")
             })
         
-        result = inference_service.predict_inspection_batch(
-            inspection_id=request.inspection_id,
-            images=image_inputs
+        result = await run_in_threadpool(
+            inference_service.predict_inspection_batch,
+            request.inspection_id,
+            image_inputs,
         )
         
         if result['success']:
@@ -190,12 +196,12 @@ async def predict_file_upload(file: UploadFile = File(...)):
         temp_file.write(content)
         temp_file.close()
         
-        # 예측 수행
-        result = inference_service.predict_single_image(
-            image_input=temp_file.name,
-            input_type="file_path"
+        result = await run_in_threadpool(
+            inference_service.predict_single_image,
+            temp_file.name,
+            "file_path",
         )
-        
+
         if result['success']:
             # 파일 정보 추가
             result['file_info'] = {
