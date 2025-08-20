@@ -1,0 +1,3 @@
+[submodule "services/press-defect-detection-model-service/app/yolov7"]
+    path = services/press-defect-detection-model-service/app/yolov7
+    url  = <YOLOv7-repo-URL>
