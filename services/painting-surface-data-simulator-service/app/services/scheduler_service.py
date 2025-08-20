@@ -61,14 +61,14 @@ class SimulatorScheduler:
 
     async def _initial_health_check(self):
         """초기 헬스 체크"""
-        print("🔍 도장 표면 결함탐지 서비스 헬스 체크 중...")
+        print("🔍 백엔드 서비스 헬스 체크 중...")
         is_healthy = await painting_surface_model_client.health_check()
 
         status = "✅" if is_healthy else "❌"
-        print(f"   {status} 도장 표면 결함탐지 서비스")
+        print(f"   {status} 백엔드 서비스")
 
         if not is_healthy:
-            raise Exception("도장 표면 결함탐지 서비스가 비활성 상태입니다.")
+            raise Exception("백엔드 서비스가 비활성 상태입니다.")
 
         print(f"📈 활성 서비스: 1/1")
         print("-" * 60)
@@ -89,8 +89,8 @@ class SimulatorScheduler:
             image_data = simulated_data["images"]
             print(f"📊 이미지 데이터: {len(image_data)} 개")
 
-            # 도장 표면 결함탐지 서비스에 예측 요청
-            print("🤖 도장 표면 결함탐지 서비스에 예측 요청 중...")
+            # 백엔드 서비스에 결함 감지 요청
+            print("🤖 백엔드 서비스에 결함 감지 요청 중...")
             predictions = await painting_surface_model_client.predict_painting_surface_data(image_data)
 
             if not predictions:

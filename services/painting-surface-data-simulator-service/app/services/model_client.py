@@ -12,16 +12,17 @@ class PaintingSurfaceModelClient:
         self.timeout = httpx.Timeout(settings.http_timeout)
         self.max_retries = settings.max_retries
         self.service_name = "painting-surface"
-        self.service_url = settings.model_service_url
+        # AI 모델 대신 백엔드 URL 사용
+        self.backend_url = settings.backend_service_url
 
     async def predict_painting_surface_data(self, image_files: List[str]) -> Optional[Dict[str, Any]]:
-        """도장 표면 이미지 데이터 예측 요청"""
-        if not self.service_url:
-            print(f"❌ Painting Surface 서비스 URL을 찾을 수 없습니다.")
+        """도장 표면 이미지 데이터를 백엔드로 전송하여 결함 감지 요청"""
+        if not self.backend_url:
+            print(f"❌ Backend 서비스 URL을 찾을 수 없습니다.")
             return None
 
-        # 파일 업로드 방식 엔드포인트 사용
-        predict_url = f"{self.service_url}/predict/file"
+        # 백엔드의 결함 감지 API 엔드포인트 사용
+        predict_url = f"{self.backend_url}/api/painting-surface/defect-detection"
 
         results = {}
 
@@ -39,8 +40,8 @@ class PaintingSurfaceModelClient:
                     print(f"⚠️ 이미지 다운로드 실패: {image_file}")
                     continue
                 
-                # 파일 업로드 방식으로 예측 요청
-                result = await self._predict_with_file_upload(predict_url, image_data, image_file, 0.5)
+                # 백엔드로 결함 감지 요청
+                result = await self._predict_with_backend(predict_url, image_data, image_file)
                 if result:
                     # 상세한 예측 결과 로깅
                     self._log_detailed_prediction_result(image_file, result)
@@ -87,11 +88,12 @@ class PaintingSurfaceModelClient:
         }
 
     async def health_check(self) -> bool:
-        """도장 표면 결함탐지 서비스 헬스 체크"""
-        if not self.service_url:
+        """백엔드 서비스 헬스 체크"""
+        if not self.backend_url:
             return False
 
-        health_url = f"{self.service_url}/health"
+        # 백엔드의 루트 경로로 헬스 체크 (health 엔드포인트 대신)
+        health_url = f"{self.backend_url}/"
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -110,39 +112,44 @@ class PaintingSurfaceModelClient:
             print(f"❌ Azure Storage에서 이미지 다운로드 실패 ({image_path}): {e}")
             return None
 
-    async def _predict_with_file_upload(self, predict_url: str, image_data: bytes, filename: str, confidence_threshold: float) -> Optional[Dict[str, Any]]:
-        """파일 업로드 방식으로 예측 요청"""
+    async def _predict_with_backend(self, backend_url: str, image_data: bytes, image_file: str) -> Optional[Dict[str, Any]]:
+        """백엔드를 통해 결함 감지 요청"""
         for attempt in range(self.max_retries):
             try:
-                # multipart/form-data로 파일 업로드
+                # multipart/form-data로 이미지 파일 업로드
                 files = {
-                    'image': (filename, image_data, 'image/jpeg')
-                }
-                data = {
-                    'confidence_threshold': str(confidence_threshold)
+                    'image': (image_file, image_data, 'image/jpeg')
                 }
                 
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    response = await client.post(predict_url, files=files, data=data)
+                    response = await client.post(backend_url, files=files)
 
                     if response.status_code == 200:
                         result = response.json()
-                        print(f"✅ {filename} 예측 성공 (시도 {attempt + 1})")
+                        print(f"✅ {image_file} 백엔드 응답 성공 (시도 {attempt + 1})")
+                        
+                        # 백엔드에서 이미 DB 저장 처리를 했으므로
+                        # 시뮬레이터에서는 결과만 확인
+                        if result.get("status") == "defect":
+                            print(f"🚨 결함 감지됨: {image_file} - 백엔드에서 DB에 자동 저장됨")
+                        else:
+                            print(f"✅ 정상 상태: {image_file}")
+                        
                         return result
                     else:
-                        print(f"⚠️ {filename} HTTP {response.status_code} (시도 {attempt + 1})")
+                        print(f"⚠️ {image_file} HTTP {response.status_code} (시도 {attempt + 1})")
 
             except httpx.TimeoutException:
-                print(f"⏰ {filename} 타임아웃 (시도 {attempt + 1})")
+                print(f"⏰ {image_file} 타임아웃 (시도 {attempt + 1})")
             except httpx.ConnectError:
-                print(f"🔌 {filename} 연결 실패 (시도 {attempt + 1})")
+                print(f"🔌 {image_file} 연결 실패 (시도 {attempt + 1})")
             except Exception as e:
-                print(f"❌ {filename} 예측 오류 (시도 {attempt + 1}): {e}")
+                print(f"❌ {image_file} 백엔드 통신 오류 (시도 {attempt + 1}): {e}")
 
             if attempt < self.max_retries - 1:
                 await asyncio.sleep(2 ** attempt)  # 지수 백오프
 
-        print(f"❌ {filename} 최대 재시도 횟수 초과")
+        print(f"❌ {image_file} 최대 재시도 횟수 초과")
         return None
 
     def _log_detailed_prediction_result(self, image_file: str, result: Dict[str, Any]):

@@ -16,12 +16,15 @@ class Settings(BaseSettings):
     batch_size: int = 10
     
     # 도장 표면 결함 감지 모델 서비스 설정
-    painting_model_url: str = "http://localhost:8002"
+    # painting_model_url: str = "http://localhost:8002"
+    
+    # 백엔드 서비스 설정 (새로 추가)
+    backend_url: str = "http://smart-factory-painting-backend:8080"
     
     # 로그 설정
     log_directory: str = "logs"
     log_filename: str = "painting_defect_detections.json"
-    error_log_filename: str = "painting_errors.json"
+    error_log_filename: str = "painting_defect_detections.json"
     
     # HTTP 클라이언트 설정
     http_timeout: int = 30
@@ -31,6 +34,11 @@ class Settings(BaseSettings):
     def model_service_url(self) -> str:
         """도장 표면 결함 감지 모델 서비스 URL"""
         return self.painting_model_url
+    
+    @property
+    def backend_service_url(self) -> str:
+        """백엔드 서비스 URL"""
+        return self.backend_url
     
     model_config = {
         "env_file": ".env",

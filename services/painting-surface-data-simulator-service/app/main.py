@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     print(f"   Azure Connection String: {'✅ 설정됨' if settings.azure_connection_string else '❌ 설정되지 않음'}")
     print(f"   Azure Container: {settings.azure_container_name}")
     print(f"   Painting Data Folder: {settings.painting_data_folder}")
-    print(f"   Model URL: {settings.painting_model_url}")
+    print(f"   Backend URL: {settings.backend_service_url}")
     
     if not settings.azure_connection_string:
         print("⚠️ AZURE_CONNECTION_STRING 환경 변수가 설정되지 않았습니다.")
