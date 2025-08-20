@@ -205,16 +205,29 @@ class AzureStorageService:
         self.current_file_name = None
         self.current_row_index = 0
 
-    async def close(self):
+    async def reset_connection(self):
+        """연결 상태 초기화 (재시작 시 사용)"""
+        try:
+            if hasattr(self, '_current_client'):
+                await self._current_client.close()
+                delattr(self, '_current_client')
+            
+            self.current_file_name = None
+            self.current_row_index = 0
+            
+            system_log.info("Azure Storage 연결 상태 초기화 완료")
+        except Exception as e:
+            system_log.warning(f"연결 초기화 중 오류 (무시됨): {str(e)}")
+
+    async def close(self): 
         """연결 종료 (선택적)"""
         try:
-            if hasattr(self, "blob_service_client") and self.blob_service_client:
-                await self.blob_service_client.close()
-                system_log.info("Azure Storage 연결 종료 완료")
+            if hasattr(self, '_current_client'):
+                await self._current_client.close()
+                delattr(self, '_current_client')
+            system_log.info("Azure Storage 연결 종료 완료")
         except Exception as e:
-            system_log.error(f"Azure Storage 연결 종료 중 오류: {str(e)}")
-        finally:
-            self.is_connected = False
+            system_log.warning(f"연결 종료 중 오류 (무시됨): {str(e)}")
 
 
 azure_storage = AzureStorageService()
