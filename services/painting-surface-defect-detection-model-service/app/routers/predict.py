@@ -37,6 +37,13 @@ class PredictionRequest(BaseModel):
         return v
 
 
+class ImagePathRequest(BaseModel):
+    """이미지 경로 기반 예측 요청 스키마"""
+    image_path: str = Field(..., description="이미지 파일 경로")
+    confidence_threshold: Optional[float] = Field(0.5, ge=0.0, le=1.0, description="신뢰도 임계값 (0.0-1.0)")
+    timestamp: Optional[str] = Field(None, description="타임스탬프")
+
+
 class PredictionResponse(BaseModel):
     """예측 응답 스키마"""
     predictions: List[Dict[str, Any]]
@@ -53,7 +60,7 @@ def get_detection_service() -> PaintingSurfaceDefectDetectionService:
     return detection_service
 
 
-@router.post("/predict", response_model=PredictionResponse)
+@router.post("/predict/file", response_model=PredictionResponse)
 async def predict(
     image: UploadFile = File(..., description="이미지 파일"),
     confidence_threshold: float = Form(0.5, ge=0.0, le=1.0, description="신뢰도 임계값 (0.0-1.0)")
@@ -94,7 +101,7 @@ async def predict(
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
-@router.post("/predict/base64", response_model=PredictionResponse)
+@router.post("/predict", response_model=PredictionResponse)
 def predict_base64(data: PredictionRequest):
     """
     도장 표면 결함 탐지 (Base64 방식)
@@ -118,6 +125,9 @@ def predict_base64(data: PredictionRequest):
     except Exception as e:
         logger.error(f"Error in base64 prediction: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Base64 prediction failed: {str(e)}")
+
+
+
 
 
 def predict_anomaly(image_data: bytes, confidence_threshold: Optional[float] = None):
