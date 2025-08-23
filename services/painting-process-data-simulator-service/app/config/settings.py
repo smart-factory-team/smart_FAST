@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     batch_size: int = 10
 
     # Backend 서비스 설정
-    backend_service_url: AnyHttpUrl = "http://localhost:8087/equipment-data" 
+    backend_service_url: AnyHttpUrl = "http://localhost:8088/equipment-data" 
 
     # HTTP 클라이언트 설정
     http_timeout: int = 30
