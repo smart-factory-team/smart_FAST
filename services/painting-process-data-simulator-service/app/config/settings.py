@@ -1,7 +1,5 @@
-import os
-from typing import Dict
 from pydantic_settings import BaseSettings
-
+from pydantic import AnyHttpUrl, field_validator  
 
 class Settings(BaseSettings):
     # Azure Storage 설정
@@ -12,27 +10,32 @@ class Settings(BaseSettings):
     painting_data_folder: str = "painting-process-equipment"
 
     # 스케줄러 설정
-    scheduler_interval_minutes: int = 1
+    scheduler_interval_seconds: int = 30
     batch_size: int = 10
 
-    # Painting Process Equipment 모델 서비스 설정
-    painting_service_url: str = os.getenv("PAINTING_SERVICE_URL", "http://localhost:8001")
-
-    # 로그 설정
-    log_directory: str = "logs"
-    log_filename: str = "painting_issue_logs.json"
-    error_log_filename: str = "painting_errors.json"
+    # Backend 서비스 설정
+    backend_service_url: AnyHttpUrl = "http://localhost:8088/equipment-data" 
 
     # HTTP 클라이언트 설정
     http_timeout: int = 30
-    max_retries: int = 3
 
-    @property
-    def model_services(self) -> Dict[str, str]:
-        """Painting Process Equipment 모델 서비스 URL"""
-        return {
-            "painting-process-equipment": self.painting_service_url
-        }
+    # 로그 디렉토리
+    log_directory: str = "logs"
+
+    # Validators  
+    @field_validator("scheduler_interval_seconds")
+    @classmethod
+    def _positive_interval(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("scheduler_interval_seconds must be > 0")
+        return v
+
+    @field_validator("batch_size", "http_timeout")
+    @classmethod
+    def _positive_ints(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("batch_size and http_timeout must be > 0")
+        return v
 
     model_config = {
         "env_file": ".env",
