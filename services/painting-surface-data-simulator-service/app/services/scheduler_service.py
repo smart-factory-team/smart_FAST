@@ -74,7 +74,7 @@ class SimulatorScheduler:
         print("-" * 60)
 
     async def _simulate_data_collection(self):
-        """주기적 도장 표면 결함 감지 데이터 수집 및 예측 작업"""
+        """주기적 도장 표면 결함 감지 데이터 수집 및 백엔드 전송"""
         try:
             print(f"🔄 도장 표면 결함 감지 데이터 수집 시작 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print("📊 Azure Storage에서 이미지 데이터 조회 중...")
@@ -87,9 +87,13 @@ class SimulatorScheduler:
                 return
 
             image_data = simulated_data["images"]
-            print(f"📊 이미지 데이터: {len(image_data)} 개")
+            total_images = len(image_data)
+            print(f"📊 이미지 데이터: {total_images} 개")
 
-            # 백엔드 서비스에 결함 감지 요청
+            # 백엔드에 배치 시작 정보 전송
+            await self._send_batch_info_to_backend(total_images)
+
+            # 백엔드 서비스에 결함 감지 요청 (AI 모델 호출 대신)
             print("🤖 백엔드 서비스에 결함 감지 요청 중...")
             predictions = await painting_surface_model_client.predict_painting_surface_data(image_data)
 
@@ -128,6 +132,33 @@ class SimulatorScheduler:
         except Exception as e:
             print(f"❌ 데이터 수집 중 오류 발생: {e}")
             anomaly_logger.log_error("painting-surface-scheduler", str(e))  # 도장 표면 서비스로 수정
+
+    async def _send_batch_info_to_backend(self, total_images: int):
+        """백엔드에 배치 시작 정보 전송"""
+        try:
+            import httpx
+            from datetime import datetime
+            
+            batch_info = {
+                "totalImages": total_images,
+                "batchStartTime": datetime.now().isoformat()
+            }
+            
+            backend_url = settings.backend_service_url  # 설정 파일에서 가져오기
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{backend_url}/api/painting-surface/defect-detection/batch-start",
+                    json=batch_info
+                )
+                
+                if response.status_code == 200:
+                    print(f"✅ 배치 정보 전송 성공: {total_images}개 이미지")
+                else:
+                    print(f"❌ 배치 정보 전송 실패: {response.status_code}")
+                    
+        except Exception as e:
+            print(f"❌ 배치 정보 전송 중 오류: {e}")
 
     def get_status(self) -> dict:
         """스케줄러 상태 정보"""

@@ -30,8 +30,9 @@ async def lifespan(app: FastAPI):
         # Azure Storage 연결 테스트
         try:
             print("🔗 Azure Storage 연결 테스트 중...")
-            await azure_storage.connect()
-            print("✅ Azure Storage 연결 성공!")
+            # 간단한 연결 테스트 - 파일 목록 조회
+            test_files = await azure_storage.list_data_files()
+            print(f"✅ Azure Storage 연결 성공! ({len(test_files)}개 파일 발견)")
         except Exception as e:
             print(f"❌ Azure Storage 연결 실패: {e}")
             print("   연결 문자열과 계정 키를 확인해주세요.")

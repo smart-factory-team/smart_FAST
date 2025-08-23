@@ -12,14 +12,14 @@ class Settings(BaseSettings):
     painting_data_folder: str = "painting-surface"
     
     # 스케줄러 설정
-    scheduler_interval_minutes: int = 1
-    batch_size: int = 10
+    scheduler_interval_minutes: float = 0.5
+    batch_size: int = 4
     
-    # 도장 표면 결함 감지 모델 서비스 설정
-    # painting_model_url: str = "http://localhost:8002"
+    # 도장 표면 결함 감지 모델 서비스 설정 (로컬 실행용)
+    painting_model_url: str = "http://localhost:8002"
     
-    # 백엔드 서비스 설정 (새로 추가)
-    backend_url: str = "http://smart-factory-painting-backend:8080"
+    # 백엔드 서비스 설정 (로컬 실행용)
+    backend_url: str = "http://localhost:8080"
     
     # 로그 설정
     log_directory: str = "logs"

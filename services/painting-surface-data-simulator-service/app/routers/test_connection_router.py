@@ -13,9 +13,7 @@ pytestmark = pytest.mark.asyncio
 async def test_azure_connection():
     """Azure Storage 연결 테스트"""
     try:
-        await azure_storage.connect()
         files = await azure_storage.list_data_files()
-        await azure_storage.disconnect()
 
         return {
             "status": "success",

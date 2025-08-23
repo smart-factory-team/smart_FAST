@@ -9,73 +9,34 @@ class AzureStorageService:
     def __init__(self):
         self.connection_string = settings.azure_connection_string
         self.container_name = settings.azure_container_name
-        self.client = None
         
         # 도장 표면 이미지 처리를 위한 인덱스
         self.image_index = 0
 
-    async def connect(self):
-        """Azure Blob Storage 클라이언트 초기화"""
-        if not self.connection_string:
-            raise ValueError("Azure connection string이 설정되지 않았습니다.")
 
-        try:
-            self.client = BlobServiceClient.from_connection_string(
-                self.connection_string)
-            
-            # 연결 테스트
-            await self._test_connection()
-            print(f"✅ Azure Blob Storage 연결 성공: {self.container_name}")
-            
-        except ClientAuthenticationError as e:
-            print(f"❌ Azure Storage 인증 실패: {e}")
-            print(f"   연결 문자열을 확인해주세요: {self.connection_string[:50]}...")
-            raise
-        except Exception as e:
-            print(f"❌ Azure Storage 연결 실패: {e}")
-            raise
-
-    async def _test_connection(self):
-        """연결 테스트 - 컨테이너 존재 여부 확인"""
-        try:
-            container_client = self.client.get_container_client(self.container_name)
-            properties = await container_client.get_container_properties()
-            print(f"📦 컨테이너 확인: {properties.name}")
-            # created_on 속성이 없을 수 있으므로 안전하게 처리
-            if hasattr(properties, 'created_on'):
-                print(f"   생성일: {properties.created_on}")
-            else:
-                print("   생성일: 알 수 없음")
-        except Exception as e:
-            print(f"⚠️ 컨테이너 접근 실패: {e}")
-            raise
-
-    async def disconnect(self):
-        """연결 종료"""
-        if self.client:
-            await self.client.close()
 
     async def list_data_files(self) -> List[str]:
         """데이터 파일 목록 조회"""
+        if not self.connection_string:
+            print("❌ Azure connection string이 설정되지 않았습니다.")
+            return []
+            
         try:
-            if not self.client:
-                await self.connect()
-                
-            container_client = self.client.get_container_client(
-                self.container_name)
-            blob_list = []
+            async with BlobServiceClient.from_connection_string(self.connection_string) as client:
+                container_client = client.get_container_client(self.container_name)
+                blob_list = []
 
-            # 도장 표면 이미지 폴더 검색
-            prefix = f"{settings.painting_data_folder}/"
-            print(f"🔍 검색 중: {prefix}")
+                # 도장 표면 이미지 폴더 검색
+                prefix = f"{settings.painting_data_folder}/"
+                print(f"🔍 검색 중: {prefix}")
 
-            async for blob in container_client.list_blobs(name_starts_with=prefix):
-                if blob.name.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                    blob_list.append(blob.name)
-                    print(f"📁 발견된 파일: {blob.name}")
+                async for blob in container_client.list_blobs(name_starts_with=prefix):
+                    if blob.name.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                        blob_list.append(blob.name)
+                        print(f"📁 발견된 파일: {blob.name}")
 
-            print(f"📊 총 {len(blob_list)}개의 이미지 파일 발견")
-            return sorted(blob_list)
+                print(f"📊 총 {len(blob_list)}개의 이미지 파일 발견")
+                return sorted(blob_list)
             
         except ClientAuthenticationError as e:
             print(f"❌ 인증 오류로 인한 파일 목록 조회 실패: {e}")
@@ -87,21 +48,23 @@ class AzureStorageService:
 
     async def read_image_data(self, blob_name: str) -> Optional[bytes]:
         """이미지 파일 읽기"""
+        if not self.connection_string:
+            print("❌ Azure connection string이 설정되지 않았습니다.")
+            return None
+            
         try:
-            if not self.client:
-                await self.connect()
-                
-            blob_client = self.client.get_blob_client(
-                container=self.container_name,
-                blob=blob_name
-            )
+            async with BlobServiceClient.from_connection_string(self.connection_string) as client:
+                blob_client = client.get_blob_client(
+                    container=self.container_name,
+                    blob=blob_name
+                )
 
-            # 비동기로 blob 데이터 다운로드
-            blob_data = await blob_client.download_blob()
-            content = await blob_data.readall()
+                # 비동기로 blob 데이터 다운로드
+                blob_data = await blob_client.download_blob()
+                content = await blob_data.readall()
 
-            print(f"📁 이미지 읽기 성공: {blob_name} ({len(content)} bytes)")
-            return content
+                print(f"📁 이미지 읽기 성공: {blob_name} ({len(content)} bytes)")
+                return content
 
         except Exception as e:
             print(f"❌ 이미지 읽기 실패 ({blob_name}): {e}")

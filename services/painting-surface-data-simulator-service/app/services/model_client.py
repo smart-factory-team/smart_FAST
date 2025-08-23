@@ -71,7 +71,7 @@ class PaintingSurfaceModelClient:
             }
 
         # 결함이 하나라도 탐지되면 anomaly
-        defect_count = sum(1 for result in image_results if result.get('predictions', []))
+        defect_count = sum(1 for result in image_results if result.get('status') == 'defect')
         total_count = len(image_results)
 
         if defect_count > 0:
@@ -92,8 +92,8 @@ class PaintingSurfaceModelClient:
         if not self.backend_url:
             return False
 
-        # 백엔드의 루트 경로로 헬스 체크 (health 엔드포인트 대신)
-        health_url = f"{self.backend_url}/"
+        # 백엔드의 모델 헬스 체크 엔드포인트 사용
+        health_url = f"{self.backend_url}/api/painting-surface/defect-detection/model-health"
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -172,6 +172,13 @@ class PaintingSurfaceModelClient:
         
         print(f"   🕒 예측 시간: {result.get('timestamp', 'N/A')}")
         print(f"   🤖 모델 소스: {result.get('model_source', 'N/A')}")
+        
+        # 추가: 전체 응답 구조 로깅
+        print(f"   🔍 전체 응답 구조:")
+        for key, value in result.items():
+            if key != 'predictions':  # predictions는 이미 위에서 처리됨
+                print(f"      {key}: {value}")
+        
         print("-" * 60)
 
 
