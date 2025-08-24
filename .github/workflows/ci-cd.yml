@@ -55,10 +55,10 @@ jobs:
             # 서비스 디렉토리 확인
             if [ -d "services/$SERVICE_NAME" ]; then
               echo "✅ Service directory found: services/$SERVICE_NAME"
-              SERVICES="$SERVICE_NAME"
+              CHANGED_SERVICES="$SERVICE_NAME"
+              DETECTION_METHOD="pr_title"
             else
               echo "❌ Service directory not found: services/$SERVICE_NAME"
-              SERVICES=""
             fi
           fi
           
@@ -151,12 +151,6 @@ jobs:
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics > flake8-results.txt 2>&1 || true
           LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt 2>/dev/null || echo "0")
-          
-          # 안전하게 output 쓰기
-          {
-            echo "lint_errors=${LINT_ERRORS}"
-            echo "service_name=${{ matrix.service }}"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Run tests with coverage - ${{ matrix.service }}
         id: test
