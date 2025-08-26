@@ -7,9 +7,9 @@ from datetime import datetime
 import asyncio
 
 # 모델 및 서비스 import 수정
-from press_models.yolo_model import YOLOv7Model
-from services.inference import InferenceService
-from routers.predict import router as predict_router, set_inference_service
+from app.press_models.yolo_model import YOLOv7Model
+from app.services.inference import InferenceService
+from app.routers.predict import router as predict_router, set_inference_service
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
