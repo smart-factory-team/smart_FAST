@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 import schedule
 
-from config.settings import settings, update_simulation_status, increment_simulation_stats, update_current_inspection_id, get_simulation_stats
-from utils.logger import simulator_logger
-from services.azure_storage import azure_storage_service
-from services.model_client import model_service_client  # 기존 (백업용)
-from services.spring_boot_client import spring_boot_client  # 🆕 새로 추가
+from app.config.settings import settings, update_simulation_status, increment_simulation_stats, update_current_inspection_id, get_simulation_stats
+from app.utils.logger import simulator_logger
+from app.services.azure_storage import azure_storage_service
+from app.services.model_client import model_service_client  # 기존 (백업용)
+from app.services.spring_boot_client import spring_boot_client  # 🆕 새로 추가
 
 class SchedulerService:
     """스케줄러 서비스 - Event Driven Architecture 지원"""

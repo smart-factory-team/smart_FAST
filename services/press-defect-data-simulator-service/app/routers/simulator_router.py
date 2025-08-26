@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 
-from services.scheduler_service import scheduler_service
-from config.settings import get_simulation_stats, get_settings_summary
-from utils.logger import simulator_logger
+from app.services.scheduler_service import scheduler_service
+from app.config.settings import get_simulation_stats, get_settings_summary
+from app.utils.logger import simulator_logger
 
 router = APIRouter(prefix="/simulator", tags=["Simulator Control"])
 

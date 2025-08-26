@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from config.settings import settings
+from app.config.settings import settings
 
 class SimulatorLogger:
     """시뮬레이터 전용 로거"""

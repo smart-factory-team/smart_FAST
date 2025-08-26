@@ -8,12 +8,12 @@ from typing import Dict, Any
 import signal
 import sys
 
-from config.settings import settings, validate_settings, get_settings_summary
-from utils.logger import simulator_logger
-from services.azure_storage import azure_storage_service
-from services.model_client import model_service_client
-from services.scheduler_service import scheduler_service
-from routers import connection_test_router, simulator_router
+from app.config.settings import settings, validate_settings, get_settings_summary
+from app.utils.logger import simulator_logger
+from app.services.azure_storage import azure_storage_service
+from app.services.model_client import model_service_client
+from app.services.scheduler_service import scheduler_service
+from app.routers import connection_test_router, simulator_router
 
 # 애플리케이션 생명주기 관리
 @asynccontextmanager
@@ -49,7 +49,8 @@ async def lifespan(app: FastAPI):
         simulator_logger.logger.info("🔍 외부 서비스 연결 확인 중...")
         
         # Azure Storage 연결 테스트
-        azure_available = await azure_storage_service.test_connection()
+        azure_available = await azure_storage_service.initialize() # 먼저 초기화
+        azure_available = await azure_storage_service.test_connection()  # 그다음 연결 테스트
         if azure_available:
             simulator_logger.logger.info("✅ Azure Storage 연결 확인 완료")
         else:

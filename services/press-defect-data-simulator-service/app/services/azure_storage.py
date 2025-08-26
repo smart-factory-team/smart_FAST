@@ -6,8 +6,8 @@ from azure.core.exceptions import AzureError
 import asyncio
 from PIL import Image
 
-from config.settings import settings
-from utils.logger import simulator_logger
+from app.config.settings import settings
+from app.utils.logger import simulator_logger
 
 class AzureStorageService:
     """Azure Blob Storage 서비스"""

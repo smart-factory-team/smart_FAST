@@ -4,8 +4,8 @@ import time
 from typing import Dict, List, Optional, Tuple, Any
 import json
 
-from config.settings import settings
-from utils.logger import simulator_logger
+from app.config.settings import settings
+from app.utils.logger import simulator_logger
 
 class SpringBootServiceClient:
     """Spring Boot 서비스 클라이언트 - Event Driven Architecture"""

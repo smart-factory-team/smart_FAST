@@ -65,6 +65,15 @@ class Settings(BaseSettings):
         case_sensitive = False
         env_file = ".env"
 
+    # 개발/운영 모드
+    debug_mode: bool = os.getenv("DEBUG", "false").lower() == "true"
+    
+    class Config:
+        case_sensitive = False
+        env_file = ".env"
+        # ⚠️ 추가: 정의되지 않은 필드를 무시하도록 설정합니다.
+        extra = 'ignore' 
+
 # 전역 설정 인스턴스
 settings = Settings()
 
