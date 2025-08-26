@@ -74,7 +74,7 @@ def predict_press_fault(data: SensorData) -> dict:
         is_fault = fault_probability > 0.05
         prediction_result = "고장" if is_fault else "정상"
 
-        max_error = np.max(errors) if total_sequences > 0 else 0.0
+        mean_error = np.mean(errors) if total_sequences > 0 else 0.0
 
         # 9. 원인 분석 (확률이 일정 수준 이상일 때만)
         attribute_errors_dict = None
@@ -88,7 +88,7 @@ def predict_press_fault(data: SensorData) -> dict:
         # 10. 최종 응답 데이터 구성
         response_data = {
             "prediction": prediction_result,
-            "reconstruction_error": float(max_error),
+            "reconstruction_error": float(mean_error),
             "is_fault": is_fault,
             "fault_probability": float(fault_probability),  # 계산된 확률 추가
             "attribute_errors": attribute_errors_dict,
