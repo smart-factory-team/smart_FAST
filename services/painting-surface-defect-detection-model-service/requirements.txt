@@ -10,6 +10,9 @@ python-dotenv==1.0.1
 requests==2.31.0
 torch==2.1.0
 Pillow==10.2.0
+ultralytics==8.3.169
+ultralytics-thop==2.0.16
+urllib3==2.5.0
 
 # HF 관련 (필요시만)
 transformers==4.37.2
