@@ -12,39 +12,36 @@ spec:
     kind: Deployment
     name: sf-${SERVICE_NAME}
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 2  # 5 → 2 (개발환경에서는 최대 2개)
 
-  # 스케일링 정책
+  # 보수적 스케일링 정책 (메모리 부족 방지)
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 300  # 5분 안정화
+      stabilizationWindowSeconds: 600  # 300 → 600 (10분 안정화)
       policies:
         - type: Percent
           value: 50
-          periodSeconds: 60
+          periodSeconds: 120  # 60 → 120 (더 천천히)
     scaleUp:
-      stabilizationWindowSeconds: 60   # 1분 안정화
+      stabilizationWindowSeconds: 300   # 60 → 300 (5분 안정화)
       policies:
-        - type: Percent
-          value: 100
-          periodSeconds: 60
         - type: Pods
-          value: 2
-          periodSeconds: 60
+          value: 1
+          periodSeconds: 300  # 60 → 300 (더 천천히)
 
   metrics:
-    # CPU 기반 스케일링
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-
-    # 메모리 기반 스케일링
+    # 메모리 기반 스케일링만 (실제 병목)
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: 80
+          averageUtilization: 90  # 80 → 90 (더 보수적, 실제 사용량 고려)
+
+    # CPU 스케일링 제거 (불필요하고 혼란 야기)
+    # - type: Resource
+    #   resource:
+    #     name: cpu
+    #     target:
+    #       type: Utilization
+    #       averageUtilization: 70

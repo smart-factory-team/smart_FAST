@@ -7,11 +7,11 @@ metadata:
     app: sf-${SERVICE_NAME}
     service: ${SERVICE_NAME}
 spec:
-  replicas: 1
+  replicas: 1  # 2 → 1로 변경 (메모리 절약)
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 0  # 1 → 0 (최소 1개 유지)
       maxSurge: 1
   selector:
     matchLabels:
@@ -29,9 +29,7 @@ spec:
             - containerPort: ${SERVICE_PORT}
               name: http
 
-          # 🌍 환경 변수 직접 설정
           env:
-            # 기본 서비스 설정
             - name: SERVICE_NAME
               value: "${SERVICE_NAME}"
             - name: SERVICE_PORT
@@ -43,40 +41,7 @@ spec:
             - name: DEBUG
               value: "false"
             - name: AZURE_CONNECTION_STRING
-              value: "${AZURE_CONNECTION_STRING}"  
-
-          # 필요시 주석 해제하여 사용
-          # 데이터베이스 설정
-          # - name: DATABASE_URL
-          #   value: "postgresql://user:password@localhost:5432/smartfast"
-          # - name: DATABASE_HOST
-          #   value: "localhost"
-          # - name: DATABASE_PORT
-          #   value: "5432"
-          # - name: DATABASE_NAME
-          #   value: "smartfast"
-          # - name: DATABASE_USER
-          #   value: "smartfast_user"
-          # - name: DATABASE_PASSWORD
-          #   value: "your_password_here"
-
-          # Redis 설정
-          # - name: REDIS_URL
-          #   value: "redis://localhost:6379/0"
-          # - name: REDIS_HOST
-          #   value: "localhost"
-          # - name: REDIS_PORT
-          #   value: "6379"
-
-          # JWT 설정
-          # - name: JWT_SECRET
-          #   value: "your-jwt-secret-key-here"
-          # - name: JWT_ALGORITHM
-          #   value: "HS256"
-          # - name: JWT_EXPIRE_MINUTES
-          #   value: "30"
-
-          # AI 모델 설정 (AI 서비스용)
+              value: "${AZURE_CONNECTION_STRING}"
             - name: MODEL_CACHE_DIR
               value: "/tmp/models"
             - name: HF_HOME
@@ -88,32 +53,27 @@ spec:
             - name: TOKENIZER_PARALLELISM
               value: "false"
 
-          # 외부 API 키들
-          # - name: OPENAI_API_KEY
-          #   value: "sk-your-openai-api-key-here"
-          # - name: HUGGINGFACE_API_TOKEN
-          #   value: "hf_your-huggingface-token-here"
-
-          # 기본 리소스 설정 (필요에 따라 조정)
+          # 🎯 실제 사용량 기반 리소스 설정 (핵심 수정)
           resources:
             requests:
-              memory: "128Mi"     # 256Mi → 128Mi
-              cpu: "100m"         # 250m → 100m  
-              ephemeral-storage: "256Mi"  # 1Gi → 256Mi
+              memory: "512Mi"     # 128Mi → 512Mi (실제 사용량 맞춤)
+              cpu: "50m"          # 100m → 50m (CPU 충분)
+              ephemeral-storage: "256Mi"
+              
             limits:
-              memory: "512Mi"     # 1Gi → 512Mi
-              cpu: "200m"         # 500m → 200m
-              ephemeral-storage: "1Gi"    # 2Gi → 1Gi
+              memory: "600Mi"     # 512Mi → 600Mi (약간 여유)
+              cpu: "200m"
+              ephemeral-storage: "1Gi"
 
-          # 헬스체크 (빠른 시작)
+          # 헬스체크 최적화 (AI 모델 로딩 시간 고려)
           livenessProbe:
             httpGet:
               path: /health
               port: ${SERVICE_PORT}
               scheme: HTTP
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60  # 30 → 60 (모델 로딩 시간)
             periodSeconds: 30
-            timeoutSeconds: 5
+            timeoutSeconds: 10       # 5 → 10 (AI 응답 시간)
             failureThreshold: 3
             successThreshold: 1
 
@@ -122,13 +82,12 @@ spec:
               path: /health
               port: ${SERVICE_PORT}
               scheme: HTTP
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30  # 15 → 30 (모델 준비 시간)
             periodSeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 5
             failureThreshold: 3
             successThreshold: 1
 
-          # 보안 설정
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
@@ -136,14 +95,16 @@ spec:
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: false  # /tmp 쓰기 허용
+            readOnlyRootFilesystem: false
 
-          # 임시 디렉토리 볼륨 마운트
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: model-cache
+              mountPath: /tmp/models
+            - name: hf-cache
+              mountPath: /tmp/cache
 
-          # 라이프사이클 훅
           lifecycle:
             preStop:
               exec:
@@ -152,11 +113,17 @@ spec:
                   - -c
                   - sleep 15
 
-      # 종료 대기 시간
       terminationGracePeriodSeconds: 30
 
-      # 볼륨 정의
+      # AI 모델용 캐시 볼륨 추가
       volumes:
         - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+        - name: model-cache
+          emptyDir:
+            sizeLimit: 2Gi  # 모델 캐시용
+        - name: hf-cache
+          emptyDir:
+            sizeLimit: 1Gi  # HuggingFace 캐시용
+
