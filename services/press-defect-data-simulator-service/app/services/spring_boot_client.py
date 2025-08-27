@@ -86,6 +86,11 @@ class SpringBootServiceClient:
             }
     
     async def send_raw_data(self, inspection_id: str, images: List[Dict[str, str]]) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+        # 디버깅용 로그 추가
+        simulator_logger.logger.info(f"🔍 DEBUG: send_raw_data 시작 - {inspection_id}, 이미지 수: {len(images)}")
+        simulator_logger.logger.info(f"🔍 DEBUG: URL: {self.base_url}{self.raw_data_endpoint}")
+        simulator_logger.logger.info(f"🔍 DEBUG: 타임아웃: {self.timeout}초")  
+
         """Spring Boot로 원시 데이터 전송 (Event Driven 방식)"""
         
         start_time = time.time()
