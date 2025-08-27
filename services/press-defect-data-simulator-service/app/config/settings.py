@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     azure_press_defect_path: str = "press-defect"
     
     # 🆕 Spring Boot 서비스 설정 (NEW!)
-    spring_boot_service_url: str = os.getenv("SPRING_BOOT_SERVICE_URL", "http://127.0.0.1:8092")
+    spring_boot_service_url: str = os.getenv("SPRING_BOOT_SERVICE_URL", "http://localhost:8092")
     spring_boot_raw_data_endpoint: str = "/api/press-defect/raw-data"
     spring_boot_health_endpoint: str = "/api/press-defect/health"
-    spring_boot_timeout: int = 60  # 1분
+    spring_boot_timeout: int = 300  # 5분
     
     # 모델 서비스 설정 (기존 - 백업용으로 유지)
     model_service_url: str = os.getenv("MODEL_SERVICE_URL", "http://127.0.0.1:8000")
@@ -64,14 +64,6 @@ class Settings(BaseSettings):
     class Config:
         case_sensitive = False
         env_file = ".env"
-
-    # 개발/운영 모드
-    debug_mode: bool = os.getenv("DEBUG", "false").lower() == "true"
-    
-    class Config:
-        case_sensitive = False
-        env_file = ".env"
-        # ⚠️ 추가: 정의되지 않은 필드를 무시하도록 설정합니다.
         extra = 'ignore' 
 
 # 전역 설정 인스턴스
