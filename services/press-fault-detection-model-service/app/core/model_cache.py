@@ -4,7 +4,7 @@ from threading import Lock
 model_cache: Dict[str, Optional[Any]] = {
     "model": None,
     "scaler": None,
-    "threshold": None
+    "threshold": None,
 }
 
 cache_lock = Lock()
