@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     painting_model_url: str = "http://localhost:8002"
     
     # 백엔드 서비스 설정 (로컬 실행용)
-    backend_url: str = "http://localhost:8080"
+    backend_url: str = "http://localhost:8087"
     
     # 로그 설정
     log_directory: str = "logs"
