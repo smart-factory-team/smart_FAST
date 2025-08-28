@@ -55,10 +55,10 @@ jobs:
             # 서비스 디렉토리 확인
             if [ -d "services/$SERVICE_NAME" ]; then
               echo "✅ Service directory found: services/$SERVICE_NAME"
-              SERVICES="$SERVICE_NAME"
+              CHANGED_SERVICES="$SERVICE_NAME"
+              DETECTION_METHOD="pr_title"
             else
               echo "❌ Service directory not found: services/$SERVICE_NAME"
-              SERVICES=""
             fi
           fi
           
@@ -104,7 +104,7 @@ jobs:
   # 각 서비스별 테스트 및 린팅
   test-and-lint:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != ''
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -145,32 +145,66 @@ jobs:
           pip install pytest pytest-cov flake8 mypy
 
       - name: Linting (Flake8) - ${{ matrix.service }}
+        id: lint
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics > flake8-results.txt 2>&1 || true
+          LINT_ERRORS=$(grep -c "E9\|F63\|F7\|F82" flake8-results.txt 2>/dev/null || echo "0")
 
       - name: Run tests with coverage - ${{ matrix.service }}
+        id: test
         if: steps.check-service.outputs.exists == 'true'
         working-directory: services/${{ matrix.service }}
         run: |
           if [ -f "test_*.py" ] || [ -d "tests" ]; then
-            pytest --cov=. --cov-report=xml --cov-report=term-missing
+            pytest --cov=. --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml || true
+          
+            # 테스트 결과 파싱
+            if [ -f test-results.xml ]; then
+              TOTAL=$(grep -o 'tests="[^"]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+              FAILURES=$(grep -o 'failures="[^"]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+              ERRORS=$(grep -o 'errors="[^"]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+              SKIPPED=$(grep -o 'skipped="[^"]*"' test-results.xml | grep -o '[0-9]*' || echo "0")
+              PASSED=$((TOTAL - FAILURES - ERRORS))
+            else
+              TOTAL=0; PASSED=0; FAILURES=0; ERRORS=0; SKIPPED=0
+            fi
+          
+            # 커버리지 파싱
+            if [ -f coverage.xml ]; then
+              COVERAGE=$(grep -o 'line-rate="[^"]*"' coverage.xml | head -1 | grep -o '[0-9.]*' | awk '{print int($1*100)}' || echo "0")
+            else
+              COVERAGE="0"
+            fi
+          
+            echo "total_tests=$TOTAL" >> $GITHUB_OUTPUT
+            echo "passed_tests=$PASSED" >> $GITHUB_OUTPUT
+            echo "failed_tests=$((FAILURES + ERRORS))" >> $GITHUB_OUTPUT
+            echo "skipped_tests=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+            echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
           else
             echo "No tests found for ${{ matrix.service }}"
+            echo "total_tests=0" >> $GITHUB_OUTPUT
+            echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload coverage to Codecov - ${{ matrix.service }}
+      - name: Upload test results - ${{ matrix.service }}
         if: steps.check-service.outputs.exists == 'true'
-        uses: codecov/codecov-action@v3
+        uses: actions/upload-artifact@v4
         with:
-          file: ./services/${{ matrix.service }}/coverage.xml
-          flags: ${{ matrix.service }}
-          name: ${{ matrix.service }}-coverage
+          name: test-results-${{ matrix.service }}
+          path: |
+            services/${{ matrix.service }}/test-results.xml
+            services/${{ matrix.service }}/coverage.xml
+            services/${{ matrix.service }}/flake8-results.txt
+      
 
   # 각 서비스별 보안 스캔
   security-scan:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != ''
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -181,10 +215,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Bandit security scan - ${{ matrix.service }}
+        id: security
         working-directory: services/${{ matrix.service }}
         run: |
           pip install bandit
           bandit -r . -f json -o bandit-report.json || true
+          
+          # 보안 이슈 파싱
+          if [ -f bandit-report.json ]; then
+            HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-report.json || echo "0")
+            MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-report.json || echo "0")
+            LOW=$(jq '[.results[] | select(.issue_severity=="LOW")] | length' bandit-report.json || echo "0")
+            TOTAL=$((HIGH + MEDIUM + LOW))
+          else
+            HIGH=0; MEDIUM=0; LOW=0; TOTAL=0
+          fi
+
+          echo "high_issues=$HIGH" >> $GITHUB_OUTPUT
+          echo "medium_issues=$MEDIUM" >> $GITHUB_OUTPUT
+          echo "low_issues=$LOW" >> $GITHUB_OUTPUT
+          echo "total_issues=$TOTAL" >> $GITHUB_OUTPUT
+          echo "service_name=${{ matrix.service }}" >> $GITHUB_OUTPUT
 
       - name: Upload security scan results - ${{ matrix.service }}
         uses: actions/upload-artifact@v4
@@ -192,9 +243,119 @@ jobs:
           name: security-scan-${{ matrix.service }}
           path: services/${{ matrix.service }}/bandit-report.json
 
+
+  # 결과 통합 Job 추가
+  aggregate-results:
+    needs: [ detect-changes, test-and-lint, security-scan ]
+    if: github.event_name == 'pull_request' && always() && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    outputs:
+      total_tests: ${{ steps.aggregate.outputs.total_tests }}
+      passed_tests: ${{ steps.aggregate.outputs.passed_tests }}
+      failed_tests: ${{ steps.aggregate.outputs.failed_tests }}
+      skipped_tests: ${{ steps.aggregate.outputs.skipped_tests }}
+      coverage: ${{ steps.aggregate.outputs.coverage }}
+      lint_errors: ${{ steps.aggregate.outputs.lint_errors }}
+      high_issues: ${{ steps.aggregate.outputs.high_issues }}
+      medium_issues: ${{ steps.aggregate.outputs.medium_issues }}
+      low_issues: ${{ steps.aggregate.outputs.low_issues }}
+      total_issues: ${{ steps.aggregate.outputs.total_issues }}
+      failed_test_names: ${{ steps.aggregate.outputs.failed_test_names }}
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Aggregate results
+        id: aggregate
+        run: |
+          # 모든 테스트 결과 통합
+          TOTAL_TESTS=0
+          PASSED_TESTS=0
+          FAILED_TESTS=0
+          SKIPPED_TESTS=0
+          TOTAL_LINT_ERRORS=0
+          TOTAL_HIGH=0
+          TOTAL_MEDIUM=0
+          TOTAL_LOW=0
+          FAILED_TEST_NAMES=""
+          TOTAL_COVERAGE=0
+          SERVICE_COUNT=0
+
+          # 각 서비스별 결과 집계
+          for dir in test-results-*; do
+            if [ -d "$dir" ]; then
+              SERVICE_COUNT=$((SERVICE_COUNT + 1))
+
+              # 테스트 결과 파싱 (artifact에서)
+              if [ -f "$dir/test-results.xml" ]; then
+                T=$(grep -o 'tests="[^"]*"' "$dir/test-results.xml" | grep -o '[0-9]*' || echo "0")
+                F=$(grep -o 'failures="[^"]*"' "$dir/test-results.xml" | grep -o '[0-9]*' || echo "0")
+                E=$(grep -o 'errors="[^"]*"' "$dir/test-results.xml" | grep -o '[0-9]*' || echo "0")
+                S=$(grep -o 'skipped="[^"]*"' "$dir/test-results.xml" | grep -o '[0-9]*' || echo "0")
+
+                TOTAL_TESTS=$((TOTAL_TESTS + T))
+                FAILED_TESTS=$((FAILED_TESTS + F + E))
+                SKIPPED_TESTS=$((SKIPPED_TESTS + S))
+                PASSED_TESTS=$((PASSED_TESTS + T - F - E))
+
+                # 실패한 테스트 이름 수집
+                if [ $((F + E)) -gt 0 ]; then
+                  SERVICE_NAME=$(echo "$dir" | sed 's/test-results-//')
+                  FAILED_TEST_NAMES="$FAILED_TEST_NAMES,$SERVICE_NAME"
+                fi
+              fi
+
+              # 커버리지 집계
+              if [ -f "$dir/coverage.xml" ]; then
+                COV=$(grep -o 'line-rate="[^"]*"' "$dir/coverage.xml" | head -1 | grep -o '[0-9.]*' | awk '{print $1*100}' || echo "0")
+                TOTAL_COVERAGE=$((TOTAL_COVERAGE + COV))
+              fi
+
+              # 린트 오류 집계
+              if [ -f "$dir/flake8-results.txt" ]; then
+                LINT_ERR=$(grep -c "E9\|F63\|F7\|F82" "$dir/flake8-results.txt" || echo "0")
+                TOTAL_LINT_ERRORS=$((TOTAL_LINT_ERRORS + LINT_ERR))
+              fi
+            fi
+          done
+
+          # 보안 스캔 결과 집계
+          for dir in security-scan-*; do
+            if [ -d "$dir" ] && [ -f "$dir/bandit-report.json" ]; then
+              H=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' "$dir/bandit-report.json" || echo "0")
+              M=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' "$dir/bandit-report.json" || echo "0")
+              L=$(jq '[.results[] | select(.issue_severity=="LOW")] | length' "$dir/bandit-report.json" || echo "0")
+
+              TOTAL_HIGH=$((TOTAL_HIGH + H))
+              TOTAL_MEDIUM=$((TOTAL_MEDIUM + M))
+              TOTAL_LOW=$((TOTAL_LOW + L))
+            fi
+          done
+
+          # 평균 커버리지 계산
+          if [ $SERVICE_COUNT -gt 0 ]; then
+            AVG_COVERAGE=$((TOTAL_COVERAGE / SERVICE_COUNT))
+          else
+            AVG_COVERAGE=0
+          fi
+
+          # Outputs 설정
+          echo "total_tests=$TOTAL_TESTS" >> $GITHUB_OUTPUT
+          echo "passed_tests=$PASSED_TESTS" >> $GITHUB_OUTPUT
+          echo "failed_tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+          echo "skipped_tests=$SKIPPED_TESTS" >> $GITHUB_OUTPUT
+          echo "coverage=$AVG_COVERAGE" >> $GITHUB_OUTPUT
+          echo "lint_errors=$TOTAL_LINT_ERRORS" >> $GITHUB_OUTPUT
+          echo "high_issues=$TOTAL_HIGH" >> $GITHUB_OUTPUT
+          echo "medium_issues=$TOTAL_MEDIUM" >> $GITHUB_OUTPUT
+          echo "low_issues=$TOTAL_LOW" >> $GITHUB_OUTPUT
+          echo "total_issues=$((TOTAL_HIGH + TOTAL_MEDIUM + TOTAL_LOW))" >> $GITHUB_OUTPUT
+          echo "failed_test_names=${FAILED_TEST_NAMES#,}" >> $GITHUB_OUTPUT
+
   # 각 서비스별 Docker 빌드 및 푸시 (main 브랜치만)
   build-and-push:
-    needs: [detect-changes, test-and-lint, security-scan]
+    needs: detect-changes
     if: github.ref == 'refs/heads/main' && needs.detect-changes.outputs.services != ''
     runs-on: ubuntu-latest
     strategy:
@@ -280,8 +441,63 @@ jobs:
           export IMAGE_TAG="${{ github.sha }}"
           export REGISTRY="${{ env.REGISTRY }}"
           export IMAGE_FULL_NAME="${{ env.REGISTRY }}/smart-fast-${{ matrix.service }}:${{ github.sha }}"
+          export AZURE_CONNECTION_STRING="${{ secrets.AZURE_CONNECTION_STRING }}" 
 
-          echo "🚀 Deploying ${{ matrix.service }} with minimal setup"
+          case "${{ matrix.service }}" in
+            "painting-process-equipment-defect-detection-model-service")
+              export SERVICE_PORT="8001"
+              ;; 
+
+            "painting-surface-defect-detection-model-service")
+              export SERVICE_PORT="8002"
+              ;; 
+            
+            "press-defect-detection-model-service")
+              export SERVICE_PORT="8003"
+              ;; 
+
+            "press-fault-detection-model-service")
+              export SERVICE_PORT="8004"
+              ;; 
+
+            "vehicle-assembly-process-defect-detection-model-service")
+              export SERVICE_PORT="8005"
+              ;; 
+
+            "welding-machine-defect-detection-model-service")
+              export SERVICE_PORT="8006"
+              ;; 
+
+            "welding-machine-data-simulator-service")
+              export SERVICE_PORT="8016"
+              ;; 
+
+            "vehicle-assembly-data-simulator-service")
+              export SERVICE_PORT="8015"
+              ;; 
+
+            "press-fault-data-simulator-service")
+              export SERVICE_PORT="8014"
+              ;; 
+
+            "press-defect-data-simulator-service")
+              export SERVICE_PORT="8013"
+              ;; 
+
+            "painting-surface-data-simulator-service")
+              export SERVICE_PORT="8012"
+              ;; 
+
+            "painting-process-data-simulator-service")
+              export SERVICE_PORT="8011"
+              ;; 
+
+             *)
+              export SERVICE_PORT="8000"  # 기본값
+              ;;
+          esac
+
+          echo "🚀 Deploying ${{ matrix.service }} on port $SERVICE_PORT with minimal setup"
 
           # 순차적으로 배포 (의존성 고려)
           echo "📦 Creating namespace..."
@@ -301,10 +517,10 @@ jobs:
 
           # 배포 상태 확인
           echo "⏳ Waiting for deployment to be ready..."
-          kubectl rollout status deployment/smart-fast-${{ matrix.service }} -n smart-fast-${{ matrix.service }} --timeout=300s
+          kubectl rollout status deployment/sf-${{ matrix.service }} -n sf-${{ matrix.service }} --timeout=300s
 
           # 배포 결과 확인
-          POD_STATUS=$(kubectl get pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+          POD_STATUS=$(kubectl get pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }} -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
           if [ "$POD_STATUS" = "Running" ]; then
             echo "✅ ${{ matrix.service }} deployed successfully!"
 
@@ -318,87 +534,233 @@ jobs:
             fi
           else
             echo "⚠️ Deployment may have issues. Pod status: $POD_STATUS"
-            kubectl describe pods -n smart-fast-${{ matrix.service }} -l app=smart-fast-${{ matrix.service }}
+            kubectl describe pods -n sf-${{ matrix.service }} -l app=sf-${{ matrix.service }}
           fi
-
-  # Pull Request 자동 리뷰 (변경된 서비스별로)
+  # Pull Request 자동 리뷰 (모든 검사 완료 후)
   auto-review:
-    needs: detect-changes
-    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != ''
+    needs: [ detect-changes, aggregate-results ]
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != '' && always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: PR Code Review Comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changedServices = "${{ needs.detect-changes.outputs.services }}".split(' ').filter(s => s);
-            
+            const changedServices = "${{ needs.detect-changes.outputs.services }}".split(' ').filter(s => s.trim());
+
             if (changedServices.length === 0) {
+              console.log('No services detected, skipping review comment');
               return;
             }
-            
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            
-            const detectionMethod = "${{ needs.detect-changes.outputs.detection_method }}";
-            
-            let reviewComment = "## 🤖 Smart FAST 자동 코드 리뷰\n\n";
-            reviewComment += `### 📦 변경된 서비스 (${changedServices.length}개):\n`;
-            
-            changedServices.forEach(service => {
-              reviewComment += `- **${service}** 서비스\n`;
-            });
-            
-            if (detectionMethod === "pr_title") {
-              reviewComment += "\n🎯 **PR 제목에서 서비스 자동 감지됨** ({PREFIX}/{issuecode}/{service-name})\n";
-            } else if (detectionMethod === "git_diff") {
-              reviewComment += "\n🔍 **Git diff를 통해 서비스 감지됨**\n";
-            }
-            
-            reviewComment += "\n### ✅ 체크리스트:\n";
-            reviewComment += "- ✅ 각 서비스별 테스트 통과\n";
-            reviewComment += "- ✅ 코드 품질 검사 완료\n";
-            reviewComment += "- ✅ 보안 스캔 완료\n\n";
-            
-            reviewComment += "### 📁 변경된 파일들:\n";
-            const serviceFiles = {};
-            
-            files.forEach(file => {
-              const pathParts = file.filename.split('/');
-              if (pathParts[0] === 'services' && pathParts.length > 1) {
-                const serviceName = pathParts[1];
-                if (!serviceFiles[serviceName]) {
-                  serviceFiles[serviceName] = [];
+
+            console.log('Changed services:', changedServices);
+
+            try {
+              const detectionMethod = "${{ needs.detect-changes.outputs.detection_method }}";
+              const prTitle = "${{ github.event.pull_request.title }}";
+
+              // 각 작업의 결과 수집
+              const testResult = "${{ needs.test-and-lint.result }}";
+              const securityResult = "${{ needs.security-scan.result }}";
+
+              // 테스트 결과 파싱
+              const testOutputs = {
+                total: "${{ needs.aggregate-results.outputs.total_tests || '0' }}",
+                passed: "${{ needs.aggregate-results.outputs.passed_tests || '0' }}",
+                failed: "${{ needs.aggregate-results.outputs.failed_tests || '0' }}",
+                skipped: "${{ needs.aggregate-results.outputs.skipped_tests || '0' }}",
+                coverage: "${{ needs.aggregate-results.outputs.coverage || 'N/A' }}",
+                failedTests: "${{ needs.aggregate-results.outputs.failed_test_names || '' }}",
+                lintErrors: "${{ needs.aggregate-results.outputs.lint_errors || '0' }}",
+                lintWarnings: "${{ needs.aggregate-results.outputs.lint_warnings || '0' }}"
+              };
+
+              // 보안 스캔 결과
+              const securityOutputs = {
+                highIssues: "${{ needs.security-scan.outputs.high_issues || '0' }}",
+                mediumIssues: "${{ needs.security-scan.outputs.medium_issues || '0' }}",
+                lowIssues: "${{ needs.security-scan.outputs.low_issues || '0' }}",
+                totalIssues: "${{ needs.security-scan.outputs.total_issues || '0' }}",
+                securityDetails: "${{ needs.security-scan.outputs.security_details || '' }}"
+              };
+
+              let reviewComment = "## 🤖 Smart FAST 자동 코드 리뷰\n\n";
+              reviewComment += `### 📦 변경된 서비스 (${changedServices.length}개):\n`;
+
+              changedServices.forEach(service => {
+                reviewComment += `- **${service}** 서비스\n`;
+              });
+
+              // 감지 방법에 따른 메시지
+              if (detectionMethod === "pr_title") {
+                reviewComment += "\n🎯 **PR 제목에서 서비스 자동 감지됨**\n";
+                reviewComment += `- 제목: \`${prTitle}\`\n`;
+              } else if (detectionMethod === "git_diff") {
+                reviewComment += "\n🔍 **Git diff를 통해 서비스 감지됨**\n";
+              }
+
+              // 전체 상태 요약
+              reviewComment += "\n### 📊 전체 검사 결과:\n";
+              const allPassed = testResult === 'success' && securityResult === 'success';
+
+              if (allPassed) {
+                reviewComment += "✅ **모든 검사 통과** - 배포 준비 완료!\n";
+              } else {
+                reviewComment += "⚠️ **일부 검사에서 문제 발견** - 확인 필요\n";
+              }
+
+              // 테스트 & 린트 결과 섹션
+              reviewComment += "\n### 🧪 테스트 & 코드 품질 결과:\n";
+
+              if (testResult === 'success') {
+                reviewComment += "✅ **테스트 & 린트 통과**\n";
+              } else if (testResult === 'failure') {
+                reviewComment += "❌ **테스트 & 린트 실패**\n";
+              } else if (testResult === 'skipped') {
+                reviewComment += "⏭️ **테스트 & 린트 스킵됨**\n";
+              } else {
+                reviewComment += "⚠️ **테스트 & 린트 상태 불명**\n";
+              }
+
+              // 테스트 통계
+              if (testOutputs.total !== '0') {
+                reviewComment += `- **총 테스트**: ${testOutputs.total}개\n`;
+                reviewComment += `- **성공**: ${testOutputs.passed}개 ✅\n`;
+
+                if (testOutputs.failed !== '0') {
+                  reviewComment += `- **실패**: ${testOutputs.failed}개 ❌\n`;
                 }
-                serviceFiles[serviceName].push({
-                  name: file.filename,
-                  additions: file.additions,
-                  deletions: file.deletions
+
+                if (testOutputs.skipped !== '0') {
+                  reviewComment += `- **스킵**: ${testOutputs.skipped}개 ⏭️\n`;
+                }
+
+                if (testOutputs.coverage !== 'N/A') {
+                  reviewComment += `- **커버리지**: ${testOutputs.coverage}%\n`;
+                }
+              }
+
+              // 린트 결과
+              if (testOutputs.lintErrors !== '0' || testOutputs.lintWarnings !== '0') {
+                reviewComment += `- **린트 오류**: ${testOutputs.lintErrors}개\n`;
+                reviewComment += `- **린트 경고**: ${testOutputs.lintWarnings}개\n`;
+              }
+
+              // 실패한 테스트 상세 정보
+              if (testOutputs.failedTests) {
+                reviewComment += "\n**🔍 실패한 테스트:**\n";
+                const failedTestsList = testOutputs.failedTests.split(',').filter(t => t.trim());
+                failedTestsList.forEach(test => {
+                  reviewComment += `- \`${test.trim()}\`\n`;
                 });
               }
-            });
-            
-            Object.keys(serviceFiles).forEach(service => {
-              reviewComment += `\n**${service} 서비스:**\n`;
-              serviceFiles[service].forEach(file => {
-                reviewComment += `- \`${file.name}\` (+${file.additions} -${file.deletions})\n`;
+
+              // 보안 스캔 결과 섹션
+              reviewComment += "\n### 🔒 보안 스캔 결과:\n";
+
+              if (securityResult === 'success') {
+                reviewComment += "✅ **보안 검사 통과**\n";
+              } else if (securityResult === 'failure') {
+                reviewComment += "❌ **보안 이슈 발견**\n";
+              } else if (securityResult === 'skipped') {
+                reviewComment += "⏭️ **보안 스캔 스킵됨**\n";
+              } else {
+                reviewComment += "⚠️ **보안 스캔 상태 불명**\n";
+              }
+
+              if (securityOutputs.totalIssues !== '0') {
+                reviewComment += `- **총 보안 이슈**: ${securityOutputs.totalIssues}개\n`;
+
+                if (securityOutputs.highIssues !== '0') {
+                  reviewComment += `  - 🔴 **High**: ${securityOutputs.highIssues}개\n`;
+                }
+                if (securityOutputs.mediumIssues !== '0') {
+                  reviewComment += `  - 🟡 **Medium**: ${securityOutputs.mediumIssues}개\n`;
+                }
+                if (securityOutputs.lowIssues !== '0') {
+                  reviewComment += `  - 🟢 **Low**: ${securityOutputs.lowIssues}개\n`;
+                }
+
+                // 보안 이슈 상세 정보
+                if (securityOutputs.securityDetails) {
+                  reviewComment += "\n**🚨 주요 보안 이슈:**\n";
+                  const securityDetailsList = securityOutputs.securityDetails.split(',').filter(d => d.trim());
+                  securityDetailsList.forEach(detail => {
+                    reviewComment += `- ${detail.trim()}\n`;
+                  });
+                }
+              } else {
+                reviewComment += "- 보안 이슈가 발견되지 않았습니다 ✅\n";
+              }
+
+              // 종합 체크리스트
+              reviewComment += "\n### ✅ 검사 체크리스트:\n";
+              reviewComment += testResult === 'success' ? 
+                "- ✅ 테스트 통과\n" : 
+                "- ❌ 테스트 실패\n";
+              reviewComment += testOutputs.lintErrors === '0' ? 
+                "- ✅ 코드 품질 검사 통과\n" : 
+                "- ❌ 린트 오류 발견\n";
+              reviewComment += securityResult === 'success' ? 
+                "- ✅ 보안 스캔 통과\n" : 
+                "- ❌ 보안 이슈 발견\n";
+
+              // 배포 정보
+              reviewComment += "\n### 🚀 배포 정보:\n";
+              if (allPassed) {
+                reviewComment += "- ✅ **모든 검사 통과** - 배포 준비 완료\n";
+                reviewComment += "- 🔄 main 브랜치 머지 시 자동 배포됩니다\n";
+                reviewComment += "- 🏗️ 각 서비스는 독립적으로 빌드/배포됩니다\n";
+              } else {
+                reviewComment += "- ⚠️ **검사 실패** - 문제 해결 후 배포 가능\n";
+                if (testResult !== 'success') {
+                  reviewComment += "  - 🧪 테스트 문제 해결 필요\n";
+                }
+                if (securityResult !== 'success') {
+                  reviewComment += "  - 🔒 보안 이슈 해결 필요\n";
+                }
+              }
+              reviewComment += "- 📋 상세 로그는 Actions 탭에서 확인 가능\n";
+
+              // 기존 자동 리뷰 코멘트가 있는지 확인하고 업데이트
+              const { data: comments } = await github.rest.issues.listComments({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
               });
-            });
-            
-            reviewComment += "\n### 🚀 배포 정보:\n";
-            reviewComment += "- main 브랜치 머지 시 변경된 서비스만 자동 배포됩니다\n";
-            reviewComment += "- 각 서비스는 독립적으로 빌드/배포됩니다\n";
-            
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: reviewComment
-            });
+
+              const botComment = comments.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('🤖 Smart FAST 자동 코드 리뷰')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: reviewComment
+                });
+                console.log('Updated existing review comment');
+              } else {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: reviewComment
+                });
+                console.log('Created new review comment');
+              }
+
+            } catch (error) {
+              console.error('Error creating review comment:', error);
+              process.exit(0);
+            }

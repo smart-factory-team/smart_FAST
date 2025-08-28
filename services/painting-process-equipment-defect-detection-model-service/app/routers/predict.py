@@ -45,10 +45,9 @@ async def predict_issue(
         save_issue_log(result, config)
     except Exception as e:
         print(f"이슈 로그를 저장하는 중에 오류가 발생했습니다: {e}")
-        # 로그 저장 실패는 Critical 오류가 아니므로 200 OK를 반환하되, 경고를 포함합니다.
-        return {"predictions": [result], "warning": f"로그 파일 저장에 실패했습니다: {str(e)}"}
+        # 로그 저장 실패는 Critical 오류가 아니므로 API 호출 자체는 성공으로 간주하고 result를 반환한다.
     
-    return {"predictions": [result]}
+    return result
 
 @router.post("/file")
 async def predict_issue_from_file(

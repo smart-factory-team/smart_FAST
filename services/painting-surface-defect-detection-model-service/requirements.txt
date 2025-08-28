@@ -1,0 +1,23 @@
+# Core serving dependencies
+fastapi==0.110.0
+uvicorn==0.29.0
+ultralytics==8.3.169
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+python-multipart==0.0.9
+pandas==2.2.2
+python-dotenv==1.0.1
+requests==2.31.0
+torch==2.1.0
+Pillow==10.2.0
+urllib3==2.5.0
+
+# HF 관련 (필요시만)
+transformers==4.37.2
+accelerate==0.27.2
+huggingface_hub==0.20.3
+
+# Testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
