@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from starlette.concurrency import run_in_threadpool
 
-from services.inference import InferenceService
+from app.services.inference import InferenceService
 
 logger = logging.getLogger(__name__)
 
