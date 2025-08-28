@@ -19,7 +19,13 @@ class Settings(BaseSettings):
     azure_container_name: str = "simulator-data"
     azure_press_defect_path: str = "press-defect"
     
-    # 모델 서비스 설정
+    # 🆕 Spring Boot 서비스 설정 (NEW!)
+    spring_boot_service_url: str = os.getenv("SPRING_BOOT_SERVICE_URL", "http://localhost:8092")
+    spring_boot_raw_data_endpoint: str = "/api/press-defect/raw-data"
+    spring_boot_health_endpoint: str = "/api/press-defect/health"
+    spring_boot_timeout: int = 300  # 5분
+    
+    # 모델 서비스 설정 (기존 - 백업용으로 유지)
     model_service_url: str = os.getenv("MODEL_SERVICE_URL", "http://127.0.0.1:8000")
     model_service_predict_endpoint: str = "/predict/inspection"
     model_service_health_endpoint: str = "/health"
@@ -49,12 +55,16 @@ class Settings(BaseSettings):
     successful_simulations: int = 0
     failed_simulations: int = 0
     
+    # 🆕 아키텍처 모드 설정 (NEW!)
+    architecture_mode: str = os.getenv("ARCHITECTURE_MODE", "event_driven")  # "direct" or "event_driven"
+    
     # 개발/운영 모드
     debug_mode: bool = os.getenv("DEBUG", "false").lower() == "true"
     
     class Config:
         case_sensitive = False
         env_file = ".env"
+        extra = 'ignore' 
 
 # 전역 설정 인스턴스
 settings = Settings()
@@ -73,15 +83,26 @@ def get_settings_summary():
             "press_defect_path": settings.azure_press_defect_path,
             "connection_configured": bool(settings.azure_connection_string)
         },
+        "spring_boot_service": {
+            "url": settings.spring_boot_service_url,
+            "raw_data_endpoint": settings.spring_boot_raw_data_endpoint,
+            "timeout": settings.spring_boot_timeout,
+            "enabled": settings.architecture_mode == "event_driven"
+        },
         "model_service": {
             "url": settings.model_service_url,
             "predict_endpoint": settings.model_service_predict_endpoint,
-            "timeout": settings.model_service_timeout
+            "timeout": settings.model_service_timeout,
+            "enabled": settings.architecture_mode == "direct"
         },
         "scheduler": {
             "interval_seconds": settings.scheduler_interval_seconds,
             "max_inspection_count": settings.max_inspection_count,
             "enabled": settings.simulation_enabled
+        },
+        "architecture": {
+            "mode": settings.architecture_mode,
+            "description": "event_driven: Spring Boot + Kafka, direct: FastAPI 직접 호출"
         },
         "logging": {
             "level": settings.log_level,
@@ -98,14 +119,20 @@ def validate_settings():
     if not settings.azure_connection_string:
         errors.append("AZURE_CONNECTION_STRING이 설정되지 않았습니다.")
     
-    if not settings.model_service_url:
+    if settings.architecture_mode == "direct" and not settings.model_service_url:
         errors.append("MODEL_SERVICE_URL이 설정되지 않았습니다.")
+        
+    if settings.architecture_mode == "event_driven" and not settings.spring_boot_service_url:
+        errors.append("SPRING_BOOT_SERVICE_URL이 설정되지 않았습니다.")
     
     if settings.scheduler_interval_seconds < 10:
         errors.append("스케줄러 간격은 최소 10초 이상이어야 합니다.")
     
     if settings.max_inspection_count < 1:
         errors.append("inspection 개수는 최소 1개 이상이어야 합니다.")
+    
+    if settings.architecture_mode not in ["direct", "event_driven"]:
+        errors.append("ARCHITECTURE_MODE는 'direct' 또는 'event_driven'이어야 합니다.")
     
     return errors
 
@@ -138,5 +165,6 @@ def get_simulation_stats():
         "failed_simulations": settings.failed_simulations,
         "success_rate": round(success_rate, 2),
         "current_inspection_id": settings.current_inspection_id,
-        "simulation_enabled": settings.simulation_enabled
+        "simulation_enabled": settings.simulation_enabled,
+        "architecture_mode": settings.architecture_mode
     }

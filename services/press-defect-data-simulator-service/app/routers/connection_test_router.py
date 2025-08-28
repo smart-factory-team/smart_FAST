@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 import asyncio
 
-from services.azure_storage import azure_storage_service
-from services.model_client import model_service_client
-from utils.logger import simulator_logger
+from app.services.azure_storage import azure_storage_service
+from app.services.model_client import model_service_client
+from app.utils.logger import simulator_logger
 
 router = APIRouter(prefix="/connection", tags=["Connection Test"])
 

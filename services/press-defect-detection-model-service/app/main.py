@@ -7,7 +7,6 @@ from datetime import datetime
 import asyncio
 
 # 모델 및 서비스 import 수정
-
 from app.press_models.yolo_model import YOLOv7Model
 from app.services.inference import InferenceService
 from app.routers.predict import router as predict_router, set_inference_service
